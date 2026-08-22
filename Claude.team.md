@@ -64,33 +64,40 @@ export interface Expense {
 
 ## Timeline (arranque sábado 12PM, judging domingo 1PM)
 
-### Bloque 1 — Setup (12:00-13:30, ~1.5h)
-- **Auk:** confirmar que `loadModel()` corre en la laptop de demo (`node quickstart.js` del quickstart QVAC). El `qvac.config.json` ya existe en el repo.
-- **Federico:** levantar Supabase, crear tabla `gastos` con el schema (ver `src/types/expense.ts`), generar credenciales y compartirlas. Las variables necesarias son `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` en un `.env.local`. Sin ellas, el app funciona igual con el store in-memory.
-- **Ariel y Facundo:** revisar los componentes existentes (`src/components/`) y el `src/app/page.tsx`. El layout base ya existe — continuarlo con datos mockeados.
-- ✅ Fin de bloque: todos con el repo corriendo local (`npm run dev`) sin errores.
+### Bloque 1 — Setup (12:00-13:30, ~1.5h) — ✅ COMPLETADO
+- **Auk:** ✅ Configuración base, `qvac.config.json`, `@qvac/sdk`, models pipelines listos.
+- **Federico:** ✅ `supabase_schema.sql` creado con tabla `gastos`, índices y políticas RLS. Client configurado con fallback in-memory.
+- **Ariel y Facundo:** ✅ Layout base de Next.js, `ExpenseCapture.tsx`, `ExpenseList.tsx` con barra de distribución por categoría y `ChatQuery.tsx`.
+- ✅ **Estado**: El repo compila limpio (`npm run build` con 0 errores TS) y corre localmente.
 
-### Bloque 2 — Build core (13:30-hasta bien entrada la noche del sábado, el grueso del tiempo)
-- **Auk:** ajustar y testear los tres pipelines en `src/lib/qvac/` con inputs reales (foto de ticket mal sacada, audio con ruido). El código base ya está — probarlo y corregir lo que no ande en la laptop de demo.
-- **Federico:** si las rutas API base ya existen, el foco está en conectar correctamente con Supabase real y verificar que la tabla recibe los datos. Mockear la parte de IA si Auk no terminó — las API routes ya tienen esa lógica.
-- **Ariel:** `ExpenseCapture.tsx` ya existe — revisarlo, completar la grabación de audio con Web API y la conversión a WAV, y probar el submit real contra `/api/gastos`.
-- **Facundo:** `ExpenseList.tsx` y `ChatQuery.tsx` ya existen — revisarlos, conectar contra las API routes reales, y probar el streaming de `/api/consulta`.
-- **Sync obligatorio cada 3-4h:** cada uno mergea a `main` lo que tenga andando, aunque sea parcial. Nada de guardar cambios grandes para el final.
+### Bloque 2 — Build core (13:30-noche del sábado) — ✅ COMPLETADO
+- **Auk:** ✅ Pipelines OCR (`OCR_LATIN`), Whisper (`WHISPER_TINY`) y LLM (`LLAMA_3_2_1B_INST_Q4_0`) con parsing delimitado `[[TAG]]`, normalización de categorías y fechas.
+- **Federico:** ✅ Rutas API (`/api/gastos`, `/api/consulta`, `/api/warmup`) implementadas con `export const runtime = 'nodejs'`.
+- **Ariel:** ✅ `ExpenseCapture.tsx` con soporte para tickets (foto) y voz (Web Audio API) y carga manual.
+- **Facundo:** ✅ `ExpenseList.tsx` (con flag visual de anomalías + desglose porcentual) y `ChatQuery.tsx` (streaming SSE de respuestas).
+- 🔄 **Sync status:** Merges de todas las ramas integrados en `main`, build limpio y 0 errores TypeScript.
 
-### Bloque 3 — Integración real (mañana del domingo, primeras horas)
-- Reemplazar todos los mocks (frontend y de Federico) por las llamadas reales al pipeline de Auk.
-- Correr los tests manuales obligatorios: foto de ticket real mal sacada, audio con ruido, consulta contra datos reales, `git clone` limpio.
-- Auk resuelve cualquier conflicto de merge que aparezca.
+### Bloque 3 — Integración real y Testing (domingo mañana) — ✅ COMPLETADO
+- ✅ **Supabase Cloud Conectado y Verificado**: Variables en `.env.local`, operaciones `GET`, `POST` y `DELETE` validadas contra la base de datos real en Supabase.
+- ✅ **Warmup y Modelos en Memoria**: Endpoint `/api/warmup` con los 3 modelos precargados (`OCR_LATIN`, `WHISPER_TINY`, `LLAMA_3_2_1B_INST_Q4_0`).
+- ✅ **Pipeline Foto/OCR/LLM Validado**: Ticket real -> OCR -> Llama delimitado -> Anomaly -> Supabase.
+- ✅ **Pipeline Audio/Whisper/LLM Validado**: Nota de voz WAV -> Whisper (`WHISPER_TINY`) -> Llama categorización -> Supabase.
+- ✅ **Detección Estadística de Anomalías**: Cálculo determinístico en código (> 2x promedio de categoría con baseline >= 3) validado y verificado en la base de datos.
+- ✅ **Chat / Streaming SSE Validado**: Consulta natural en `/api/consulta` respondiendo fluidamente con Llama-3.2-1B local procesando el historial de gastos y detectando outliers.
 
-### Bloque 4 — Buffer + pulido (últimas 2-3h antes del corte)
-- Nada de features nuevas. Solo bugs visibles y pulido de lo que se va a mostrar en el demo.
-- Completar el README con permalinks reales a los archivos de inferencia QVAC, modelo/hardware usado y setup desde clone limpio.
-- Usar el botón **"Preload Demo"** de la UI (llama a `GET /api/warmup`) para precargar los 3 modelos antes de grabar.
+### Bloque 4 — Buffer + Pulido + Permalinks (domingo mediodía) — ✅ COMPLETADO
+- ✅ **Permalinks en README.md actualizados**: Links directos a GitHub con números de línea exactos para los jueces.
+- ✅ **README con Hardware/Latencia**: Sección completa con modelo, cuantización, RAM (~1.05 GB), latencias y arquitectura del sistema.
+- ✅ **Sección de Arquitectura en README**: Diagrama textual del pipeline completo (Input → QVAC OCR/Whisper/LLM → Anomaly → Supabase → Chat).
+- ✅ **Data Contract tipado**: Interface TypeScript documentada en README para los jueces.
+- ✅ **Prompt Hardening**: System Prompt de Llama 3.2 1B optimizado para respuestas directas sobre gastos del usuario.
+- ✅ **Bug crítico corregido**: Context overflow del LLM (`processPromptImpl: context overflow`) — `ctx_size` subido a 2048 y lista de gastos en chat capada a 10 registros para mantenerse dentro del context window.
+- ✅ **Setup local sin pasos ocultos**: `npm install && npm run dev` y funciona out-of-the-box con fallback in-memory.
+- ✅ **`.env.local` ignorado en git**: `.env*` está en `.gitignore` — credenciales no se commitean.
 
-### Bloque 5 — Demo y pitch (última hora)
-- Grabar el video demo de punta a punta mostrando el flujo real: subir foto → OCR → categorización → ver en lista → preguntar en chat.
-- Auk ensaya el pitch al menos 2 veces cronometrado.
-- Alguien del equipo (el que tenga margen) intenta el Vault Guardian en este bloque o en ratos muertos de bloques anteriores — nunca a costa de tiempo de desarrollo.
+### Bloque 5 — Demo y Pitch (domingo 12:00-13:00)
+- Grabar video demo de punta a punta (foto -> OCR -> categorización -> anomalía -> chat).
+- Auk ensaya el pitch (Track 1: Local agents for operations work).
 
 ---
 
