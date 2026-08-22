@@ -6,7 +6,8 @@ import { answerExpenseQuery } from '@/lib/qvac/llm-pipeline';
 
 export async function POST(req: NextRequest) {
   try {
-    const { pregunta } = await req.json();
+    const json = await req.json();
+    const pregunta = json.pregunta || json.query || json.message || '';
 
     if (!pregunta || typeof pregunta !== 'string') {
       return NextResponse.json(

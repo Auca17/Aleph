@@ -17,7 +17,11 @@ export async function getLlmModel(): Promise<string> {
     try {
       console.log('▸ [QVAC] Loading LLM Model (LLAMA_3_2_1B_INST_Q4_0)...');
       const id = await loadModel({
-        modelSrc: LLAMA_3_2_1B_INST_Q4_0
+        modelSrc: LLAMA_3_2_1B_INST_Q4_0,
+        modelConfig: {
+          ctx_size: 2048,
+          gpu_layers: 99
+        }
       });
       llmModelId = id;
       console.log(`▸ [QVAC] LLM Model loaded. ID: ${id}`);
@@ -141,29 +145,29 @@ export async function* answerExpenseQuery(
 ): AsyncGenerator<string, void, unknown> {
   const modelId = await getLlmModel();
 
-  const expensesSummary = expenses
-    .slice(0, 30)
+  // Cap to 5 most recent expenses, compact format to stay within context window
+  const rows = expenses
+    .slice(0, 5)
     .map(
       (e) =>
-        `- ${e.fecha}: $${e.monto} (${e.categoria}) - ${e.descripcion || 'Sin desc'}${
-          e.flag_anomalia ? ' [ANOMALÍA / GASTO ALTO]' : ''
-        }`
+        `${e.fecha.slice(0, 10)} | $${e.monto} | ${e.categoria}${e.flag_anomalia ? ' [ALTO]' : ''}`
     )
     .join('\n');
 
-  const systemPrompt = `Eres el asistente de inteligencia financiera local Aleph.
-El usuario te hace preguntas sobre sus gastos personales en lenguaje natural.
-Tienes acceso al siguiente registro de gastos:
-${expensesSummary || 'No hay gastos registrados todavía.'}
-
-Reglas:
-1. Responde de forma clara, concisa y empática en español.
-2. Si detectas gastos marcados como ANOMALÍA, menciónalos y explica el impacto.
-3. Si el usuario pide totales o cálculos, realiza la suma con precisión.`;
-
+  // Frame as a data analysis task to avoid safety refusals in small models
   const history = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: userQuery }
+    {
+      role: 'user' as const,
+      content: `Analiza esta tabla de registros de gastos y responde la pregunta en español de forma breve:
+
+TABLA:
+fecha | monto | categoria
+${rows || 'Sin registros.'}
+
+PREGUNTA: ${userQuery}
+
+RESPUESTA:`
+    }
   ];
 
   const result = completion({ modelId, history, stream: true });
