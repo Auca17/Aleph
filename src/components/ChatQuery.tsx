@@ -91,9 +91,7 @@ export function ChatQuery() {
 
   const quickPrompts = [
     '¿Qué gasté esta semana?',
-    '¿Por qué se disparó Alimentación?',
-    '¿Tengo alguna anomalía registrada?',
-    'Haceme un resumen de gastos'
+    '¿Tengo alguna anomalía?'
   ];
 
   return (
@@ -156,13 +154,14 @@ export function ChatQuery() {
       </div>
 
       {/* QUICK SUGGESTIONS */}
-      <div className="pt-2 pb-3 overflow-x-auto flex gap-1.5 no-scrollbar">
+      <div className="pt-2 pb-3 grid grid-cols-2 gap-2">
         {quickPrompts.map((q) => (
           <button
             key={q}
             onClick={() => handleSend(q)}
             disabled={isStreaming}
-            className="text-[11px] px-2.5 py-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200 dark:border-zinc-700 rounded-full whitespace-nowrap transition-all disabled:opacity-50"
+            className="text-[11px] px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center truncate transition-all disabled:opacity-50 font-medium"
+            title={q}
           >
             {q}
           </button>
