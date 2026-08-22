@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Expense } from '@/types/expense';
+import { Ingreso } from '@/types/ingreso';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -39,6 +40,25 @@ class LocalExpenseStore {
     }
   ];
 
+  private ingresos: Ingreso[] = [
+    {
+      id: 'ing-1',
+      monto: 150000,
+      categoria: 'Freelance',
+      fecha: new Date(Date.now() - 86400000 * 5).toISOString(),
+      fuente: 'manual',
+      descripcion: 'Desarrollo Web Frontend Client X'
+    },
+    {
+      id: 'ing-2',
+      monto: 85000,
+      categoria: 'Honorarios',
+      fecha: new Date(Date.now() - 86400000 * 1).toISOString(),
+      fuente: 'manual',
+      descripcion: 'Consultoría Financiera Aleph'
+    }
+  ];
+
   async getExpenses(): Promise<Expense[]> {
     return [...this.expenses].sort(
       (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
@@ -64,6 +84,27 @@ class LocalExpenseStore {
     const prevLen = this.expenses.length;
     this.expenses = this.expenses.filter((e) => e.id !== id);
     return this.expenses.length < prevLen;
+  }
+
+  async getIngresos(): Promise<Ingreso[]> {
+    return [...this.ingresos].sort(
+      (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+    );
+  }
+
+  async addIngreso(ingreso: Omit<Ingreso, 'id'>): Promise<Ingreso> {
+    const newIngreso: Ingreso = {
+      ...ingreso,
+      id: crypto.randomUUID()
+    };
+    this.ingresos.unshift(newIngreso);
+    return newIngreso;
+  }
+
+  async deleteIngreso(id: string): Promise<boolean> {
+    const prevLen = this.ingresos.length;
+    this.ingresos = this.ingresos.filter((i) => i.id !== id);
+    return this.ingresos.length < prevLen;
   }
 }
 
@@ -104,3 +145,35 @@ export async function removeExpense(id: string): Promise<boolean> {
   }
   return localStore.deleteExpense(id);
 }
+
+export async function fetchIngresos(): Promise<Ingreso[]> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('ingresos')
+      .select('*')
+      .order('fecha', { ascending: false });
+    if (!error && data) return data as Ingreso[];
+  }
+  return localStore.getIngresos();
+}
+
+export async function insertIngreso(ingreso: Omit<Ingreso, 'id'>): Promise<Ingreso> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('ingresos')
+      .insert([ingreso])
+      .select()
+      .single();
+    if (!error && data) return data as Ingreso;
+  }
+  return localStore.addIngreso(ingreso);
+}
+
+export async function removeIngreso(id: string): Promise<boolean> {
+  if (supabase) {
+    const { error } = await supabase.from('ingresos').delete().eq('id', id);
+    return !error;
+  }
+  return localStore.deleteIngreso(id);
+}
+
