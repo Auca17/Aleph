@@ -30,10 +30,51 @@ export async function getLlmModel(): Promise<string> {
   return loadPromise;
 }
 
+const VALID_CATEGORIES = [
+  'Alimentación',
+  'Transporte',
+  'Servicios',
+  'Salud',
+  'Entretenimiento',
+  'Indumentaria',
+  'Tecnología',
+  'Hogar',
+  'Otros'
+];
+
 function extractTag(tag: string, raw: string): string {
   const regex = new RegExp(`\\[\\[${tag}\\]\\]([\\s\\S]*?)\\[\\[\\/${tag}\\]\\]`, 'i');
   const match = raw.match(regex);
   return match ? match[1].trim() : '';
+}
+
+function normalizeCategory(rawCategory: string): string {
+  if (!rawCategory) return 'Otros';
+  const clean = rawCategory.trim();
+  const match = VALID_CATEGORIES.find(
+    (cat) => cat.toLowerCase() === clean.toLowerCase()
+  );
+  if (match) return match;
+  for (const cat of VALID_CATEGORIES) {
+    if (clean.toLowerCase().includes(cat.toLowerCase())) return cat;
+  }
+  return 'Otros';
+}
+
+function normalizeDate(rawDate: string, defaultDate: string): string {
+  if (!rawDate) return defaultDate;
+  const cleaned = rawDate.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned;
+  const ddmmyyyy = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (ddmmyyyy) {
+    const [, d, m, y] = ddmmyyyy;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  const parsed = new Date(cleaned);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toISOString().split('T')[0];
+  }
+  return defaultDate;
 }
 
 /**
@@ -70,21 +111,23 @@ ${rawText}
     for await (const token of result.tokenStream) {
       fullOutput += token;
     }
-  } else if (typeof (result as any).text === 'string') {
-    fullOutput = (result as any).text;
+  } else if (result.text) {
+    fullOutput = await result.text;
   }
 
-  // Extract fields via delimiter tags
+  // Extract fields via delimiter tags & normalize
   const rawMonto = extractTag('MONTO', fullOutput).replace(/[^0-9.]/g, '');
   const parsedMonto = parseFloat(rawMonto) || 0;
-  const rawCategoria = extractTag('CATEGORIA', fullOutput) || 'Otros';
-  const rawFecha = extractTag('FECHA', fullOutput) || todayStr;
+  const rawCategoria = extractTag('CATEGORIA', fullOutput);
+  const normalizedCategoria = normalizeCategory(rawCategoria);
+  const rawFecha = extractTag('FECHA', fullOutput);
+  const normalizedFecha = normalizeDate(rawFecha, todayStr);
   const rawDescripcion = extractTag('DESCRIPCION', fullOutput) || rawText.slice(0, 40);
 
   return {
     monto: parsedMonto,
-    categoria: rawCategoria,
-    fecha: rawFecha,
+    categoria: normalizedCategoria,
+    fecha: normalizedFecha,
     descripcion: rawDescripcion
   };
 }

@@ -26,19 +26,19 @@ All AI inference runs locally on the user's device via `@qvac/sdk`:
 As required by the track guidelines, here are the direct entrypoints where QVAC inference executes:
 
 1. **OCR Pipeline (`OCR_LATIN`)**:  
-   👉 [`src/lib/qvac/ocr-pipeline.ts`](file:///c:/Users/Rufda/Desktop/Aleph-1/src/lib/qvac/ocr-pipeline.ts#L22-L50)  
+   👉 [`src/lib/qvac/ocr-pipeline.ts`](file:///c:/Users/feder/OneDrive/Desktop/Aleph/src/lib/qvac/ocr-pipeline.ts#L40-L55)  
    *Uses `loadModel` with `OCR_LATIN` and `ocr()` function.*
 
 2. **Transcription Pipeline (`WHISPER_TINY`)**:  
-   👉 [`src/lib/qvac/transcription-pipeline.ts`](file:///c:/Users/Rufda/Desktop/Aleph-1/src/lib/qvac/transcription-pipeline.ts#L22-L48)  
+   👉 [`src/lib/qvac/transcription-pipeline.ts`](file:///c:/Users/feder/OneDrive/Desktop/Aleph/src/lib/qvac/transcription-pipeline.ts#L43-L57)  
    *Uses `loadModel` with `WHISPER_TINY` and `transcribe()` function.*
 
 3. **LLM Categorization & Natural Language Chat (`LLAMA_3_2_1B_INST_Q4_0`)**:  
-   👉 [`src/lib/qvac/llm-pipeline.ts`](file:///c:/Users/Rufda/Desktop/Aleph-1/src/lib/qvac/llm-pipeline.ts#L22-L115)  
+   👉 [`src/lib/qvac/llm-pipeline.ts`](file:///c:/Users/feder/OneDrive/Desktop/Aleph/src/lib/qvac/llm-pipeline.ts#L42-L130)  
    *Uses `loadModel` with `LLAMA_3_2_1B_INST_Q4_0` and `completion()` with streaming token iterator and delimited parsing.*
 
 4. **Deterministic Anomaly Detection**:  
-   👉 [`src/lib/anomaly.ts`](file:///c:/Users/Rufda/Desktop/Aleph-1/src/lib/anomaly.ts#L10-L40)  
+   👉 [`src/lib/anomaly.ts`](file:///c:/Users/feder/OneDrive/Desktop/Aleph/src/lib/anomaly.ts#L8-L48)  
    *Calculates statistical outliers (2x category average) in code, avoiding LLM hallucinations.*
 
 ---
@@ -60,7 +60,16 @@ cd Aleph
 npm install
 ```
 
-### 3. Run development server
+### 3. Setup Supabase (Optional)
+If using Supabase cloud persistence, add your credentials in `.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+Execute the SQL schema in [`supabase_schema.sql`](file:///c:/Users/feder/OneDrive/Desktop/Aleph/supabase_schema.sql) in the Supabase SQL Editor.  
+*Note: If no env vars are set, Aleph works automatically with an in-memory fallback store.*
+
+### 4. Run development server
 ```bash
 npm run dev
 ```
