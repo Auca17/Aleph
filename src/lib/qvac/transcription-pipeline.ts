@@ -1,3 +1,4 @@
+import '@/lib/qvac/env';
 import { loadModel, transcribe, WHISPER_TINY } from '@qvac/sdk';
 
 let whisperModelId: string | null = null;

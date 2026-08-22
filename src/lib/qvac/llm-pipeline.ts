@@ -1,3 +1,4 @@
+import '@/lib/qvac/env';
 import { loadModel, completion, LLAMA_3_2_1B_INST_Q4_0 } from '@qvac/sdk';
 import { ParsedExpense, Expense } from '@/types/expense';
 

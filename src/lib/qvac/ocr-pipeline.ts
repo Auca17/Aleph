@@ -1,3 +1,4 @@
+import '@/lib/qvac/env';
 import { loadModel, ocr, OCR_LATIN } from '@qvac/sdk';
 
 let ocrModelId: string | null = null;
