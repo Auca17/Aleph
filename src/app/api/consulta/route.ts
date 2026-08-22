@@ -29,7 +29,9 @@ export async function POST(req: NextRequest) {
           controller.close();
         } catch (err: unknown) {
           console.error('Streaming error in /api/consulta:', err);
-          controller.error(err);
+          const message = err instanceof Error ? err.message : 'Error al procesar la respuesta del modelo';
+          controller.enqueue(encoder.encode(`⚠️ Error: ${message}`));
+          controller.close();
         }
       }
     });

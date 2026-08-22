@@ -74,11 +74,14 @@ export function ChatQuery() {
         );
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'No se pudo generar respuesta';
+      let message = err instanceof Error ? err.message : 'No se pudo generar respuesta';
+      if (message.includes('Failed to fetch') || message.includes('fetch')) {
+        message = 'No se pudo conectar con el endpoint local (/api/consulta). Asegurate de tener "npm run dev" activo y presionar "Preload Demo" para asegurar que los modelos estén cargados.';
+      }
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === botMessageId
-            ? { ...msg, text: `⚠️ Error: ${message}` }
+            ? { ...msg, text: `⚠️ ${message}` }
             : msg
         )
       );
