@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, HelpCircle } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -62,25 +62,23 @@ export function ChatQuery() {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let fullBotText = '';
-
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        fullBotText += chunk;
 
         setMessages((prev) =>
           prev.map((msg) =>
-            msg.id === botMessageId ? { ...msg, text: fullBotText } : msg
+            msg.id === botMessageId ? { ...msg, text: msg.text + chunk } : msg
           )
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'No se pudo generar respuesta';
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === botMessageId
-            ? { ...msg, text: `⚠️ Error: ${err.message || 'No se pudo generar respuesta'}` }
+            ? { ...msg, text: `⚠️ Error: ${message}` }
             : msg
         )
       );

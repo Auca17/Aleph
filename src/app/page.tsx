@@ -29,7 +29,21 @@ export default function Home() {
   };
 
   useEffect(() => {
-    loadExpenses();
+    let active = true;
+    fetch('/api/gastos')
+      .then((res) => res.json())
+      .then((json) => {
+        if (active && json.success && Array.isArray(json.data)) {
+          setExpenses(json.data);
+        }
+      })
+      .catch((err) => console.error('Error fetching expenses:', err))
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleExpenseAdded = (newExpense: Expense) => {
@@ -51,8 +65,8 @@ export default function Home() {
       } else {
         setWarmupStatus('⚠️ Error en warmup: ' + (json.error || 'revisar logs'));
       }
-    } catch (e: any) {
-      setWarmupStatus('⚠️ Error: ' + e.message);
+    } catch (e: unknown) {
+      setWarmupStatus('⚠️ Error: ' + (e instanceof Error ? e.message : 'Error en warmup'));
     } finally {
       setIsWarmingUp(false);
     }

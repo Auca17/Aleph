@@ -52,6 +52,15 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
 
   const categories = Array.from(new Set(expenses.map((e) => e.categoria)));
 
+  const categoryTotals = expenses.reduce((acc, exp) => {
+    acc[exp.categoria] = (acc[exp.categoria] || 0) + exp.monto;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const sortedCategories = Object.entries(categoryTotals).sort(
+    (a, b) => b[1] - a[1]
+  );
+
   return (
     <div className="space-y-4">
       {/* STATS HEADER */}
@@ -79,6 +88,60 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
           </p>
         </div>
       </div>
+
+      {/* CATEGORY SPENDING BREAKDOWN */}
+      {expenses.length > 0 && (
+        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+          <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+            Distribución de Gastos por Categoría
+          </p>
+          <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
+            {sortedCategories.map(([cat, amount]) => {
+              const pct = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
+              const bgClass =
+                cat === 'Alimentación'
+                  ? 'bg-amber-500'
+                  : cat === 'Transporte'
+                  ? 'bg-blue-500'
+                  : cat === 'Servicios'
+                  ? 'bg-emerald-500'
+                  : cat === 'Salud'
+                  ? 'bg-rose-500'
+                  : cat === 'Entretenimiento'
+                  ? 'bg-purple-500'
+                  : cat === 'Indumentaria'
+                  ? 'bg-pink-500'
+                  : cat === 'Tecnología'
+                  ? 'bg-cyan-500'
+                  : cat === 'Hogar'
+                  ? 'bg-orange-500'
+                  : 'bg-zinc-400';
+
+              return (
+                <div
+                  key={cat}
+                  style={{ width: `${pct}%` }}
+                  className={`h-full ${bgClass} transition-all`}
+                  title={`${cat}: $${amount.toLocaleString('es-AR')} (${pct.toFixed(1)}%)`}
+                />
+              );
+            })}
+          </div>
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+            {sortedCategories.map(([cat, amount]) => {
+              const pct = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
+              return (
+                <div key={cat} className="flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-400">
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{cat}:</span>
+                  <span>${amount.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
+                  <span className="text-[10px] text-zinc-400">({pct.toFixed(0)}%)</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* FILTER BAR */}
       <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-2.5 items-center justify-between">
@@ -128,7 +191,7 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
             <p className="text-sm text-zinc-500 dark:text-zinc-400">No se encontraron gastos</p>
           </div>
         ) : (
-          filtered.map((exp) => {
+          filtered.map((exp, idx) => {
             const badgeColor =
               CATEGORY_COLORS[exp.categoria] || CATEGORY_COLORS['Otros'];
             const formattedDate = new Date(exp.fecha).toLocaleDateString('es-AR', {
@@ -139,7 +202,7 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
 
             return (
               <div
-                key={exp.id || Math.random()}
+                key={exp.id || `expense-${idx}-${exp.fecha}`}
                 className={`bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all flex items-center justify-between group hover:border-indigo-400 dark:hover:border-indigo-600 ${
                   exp.flag_anomalia
                     ? 'border-rose-300 dark:border-rose-800/80 bg-rose-50/30 dark:bg-rose-950/20'
@@ -182,7 +245,7 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
                       <span className="text-xs text-zinc-400">• {formattedDate}</span>
                       {exp.raw_text && (
                         <span className="text-[10px] text-zinc-400 truncate max-w-[150px] hidden md:inline">
-                          "{exp.raw_text}"
+                          &quot;{exp.raw_text}&quot;
                         </span>
                       )}
                     </div>

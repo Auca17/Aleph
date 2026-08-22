@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(token));
           }
           controller.close();
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error('Streaming error in /api/consulta:', err);
           controller.error(err);
         }
@@ -40,10 +40,11 @@ export async function POST(req: NextRequest) {
         'Cache-Control': 'no-cache, no-transform'
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in /api/consulta:', error);
+    const message = error instanceof Error ? error.message : 'Error procesando consulta';
     return NextResponse.json(
-      { success: false, error: error.message || 'Error procesando consulta' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

@@ -43,7 +43,19 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
     try {
       setError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      
+      let mimeType = 'audio/webm';
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
@@ -54,7 +66,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       };
 
       mediaRecorder.onstop = () => {
-        const audio = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audio = new Blob(audioChunksRef.current, { type: mimeType });
         setAudioBlob(audio);
         setAudioUrl(URL.createObjectURL(audio));
         stream.getTracks().forEach((track) => track.stop());
@@ -62,8 +74,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
 
       mediaRecorder.start();
       setIsRecording(true);
-    } catch (err: any) {
-      setError('No se pudo acceder al micrófono: ' + (err.message || 'Permiso denegado'));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Permiso denegado';
+      setError('No se pudo acceder al micrófono: ' + msg);
     }
   };
 
@@ -112,8 +125,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       );
       setSelectedFile(null);
       setImagePreview(null);
-    } catch (err: any) {
-      setError(err.message || 'Error durante la inferencia local');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error durante la inferencia local';
+      setError(msg);
     } finally {
       setIsProcessing(false);
       setProcessStep('');
@@ -129,7 +143,15 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
 
     try {
       const formData = new FormData();
-      const file = new File([audioBlob], 'audio-expense.wav', { type: 'audio/wav' });
+      const ext = audioBlob.type.includes('webm')
+        ? 'webm'
+        : audioBlob.type.includes('mp4')
+        ? 'mp4'
+        : audioBlob.type.includes('ogg')
+        ? 'ogg'
+        : 'wav';
+
+      const file = new File([audioBlob], `audio-expense.${ext}`, { type: audioBlob.type });
       formData.append('file', file);
       formData.append('fuente', 'voz');
 
@@ -159,8 +181,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       );
       setAudioBlob(null);
       setAudioUrl(null);
-    } catch (err: any) {
-      setError(err.message || 'Error durante la transcripción local');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error durante la transcripción local';
+      setError(msg);
     } finally {
       setIsProcessing(false);
       setProcessStep('');
@@ -195,8 +218,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       setSuccessInfo(`Gasto manual registrado: $${json.data.monto}`);
       setManualMonto('');
       setManualDesc('');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error guardando gasto';
+      setError(msg);
     } finally {
       setIsProcessing(false);
     }
@@ -310,6 +334,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
             </div>
           ) : (
             <div className="relative rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-black/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imagePreview}
                 alt="Ticket preview"

@@ -19,9 +19,10 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true, message: 'Gasto eliminado' });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Error eliminando gasto';
     return NextResponse.json(
-      { success: false, error: error.message || 'Error eliminando gasto' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

@@ -11,22 +11,22 @@ export async function GET() {
   try {
     const ocrId = await getOcrModel();
     results.ocr = `Ready (ID: ${ocrId})`;
-  } catch (e: any) {
-    results.ocr = `Error: ${e.message}`;
+  } catch (e: unknown) {
+    results.ocr = `Error: ${e instanceof Error ? e.message : 'Unknown error'}`;
   }
 
   try {
     const whisperId = await getWhisperModel();
     results.whisper = `Ready (ID: ${whisperId})`;
-  } catch (e: any) {
-    results.whisper = `Error: ${e.message}`;
+  } catch (e: unknown) {
+    results.whisper = `Error: ${e instanceof Error ? e.message : 'Unknown error'}`;
   }
 
   try {
     const llmId = await getLlmModel();
     results.llm = `Ready (ID: ${llmId})`;
-  } catch (e: any) {
-    results.llm = `Error: ${e.message}`;
+  } catch (e: unknown) {
+    results.llm = `Error: ${e instanceof Error ? e.message : 'Unknown error'}`;
   }
 
   return NextResponse.json({

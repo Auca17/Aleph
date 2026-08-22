@@ -15,10 +15,11 @@ export async function GET() {
   try {
     const expenses = await fetchExpenses();
     return NextResponse.json({ success: true, data: expenses });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching expenses:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { success: false, error: error.message || 'Internal server error' },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -115,10 +116,11 @@ export async function POST(req: NextRequest) {
         rawTextExtracted: rawText
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error processing expense:', error);
+    const message = error instanceof Error ? error.message : 'Error processing expense';
     return NextResponse.json(
-      { success: false, error: error.message || 'Error processing expense' },
+      { success: false, error: message },
       { status: 500 }
     );
   } finally {
