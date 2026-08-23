@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 interface Message {
   id: string;
@@ -14,7 +15,7 @@ export function ChatQuery() {
     {
       id: 'welcome',
       sender: 'bot',
-      text: '¡Hola! Soy Aleph, tu agente financiero local impulsado por QVAC. Podés preguntarme sobre tus gastos, totales por categoría o explicaciones sobre anomalías.'
+      text: '¡Hola! Soy Pockit AI, tu agente financiero local impulsado por QVAC. Podés preguntarme sobre tus gastos, totales por categoría o explicaciones sobre anomalías.'
     }
   ]);
   const [input, setInput] = useState('');
@@ -96,19 +97,32 @@ export function ChatQuery() {
   ];
 
   return (
-    <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl shadow-zinc-200/50 dark:shadow-black/50 flex flex-col h-[520px]">
-      <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+    <div
+      className="rounded-3xl p-5 flex flex-col"
+      style={{
+        background: 'var(--color-surface)',
+        boxShadow: 'var(--shadow-card)',
+        border: '1px solid var(--color-outline-variant)',
+        height: '520px'
+      }}
+    >
+      {/* HEADER */}
+      <div className="flex items-center justify-between pb-4" style={{ borderBottom: '1px solid var(--color-outline-variant)' }}>
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-            <Bot className="w-4 h-4" />
+          {/* Bot avatar with Pockit logo */}
+          <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0" style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}>
+            <Image src="/pockit-logo.jpeg" alt="Pockit AI" width={36} height={36} className="object-cover w-full h-full" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-1.5">
-              Consultor Aleph AI
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
+              Pockit AI
+              <span
+                className="w-2 h-2 rounded-full animate-pulse"
+                style={{ background: 'var(--color-secondary)' }}
+              />
             </h3>
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Llama 3.2 1B • 100% Inferencia Local
+            <p className="text-[11px]" style={{ color: 'var(--color-neutral)' }}>
+              Llama 3.2 1B · 100% Inferencia Local
             </p>
           </div>
         </div>
@@ -124,20 +138,24 @@ export function ChatQuery() {
             }`}
           >
             {msg.sender === 'bot' && (
-              <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="w-3.5 h-3.5" />
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-primary-container)' }}
+              >
+                <Bot className="w-3.5 h-3.5" />
               </div>
             )}
 
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+              className="max-w-[80%] rounded-2xl px-4 py-2.5 text-xs leading-relaxed"
+              style={
                 msg.sender === 'user'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap'
-              }`}
+                  ? { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
+                  : { background: 'var(--color-surface-container-low)', color: 'var(--color-on-surface)', whiteSpace: 'pre-wrap' }
+              }
             >
               {msg.text || (
-                <span className="flex items-center gap-1.5 text-zinc-400">
+                <span className="flex items-center gap-1.5" style={{ color: 'var(--color-neutral)' }}>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   Razonando localmente...
                 </span>
@@ -145,7 +163,10 @@ export function ChatQuery() {
             </div>
 
             {msg.sender === 'user' && (
-              <div className="w-7 h-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                style={{ background: 'var(--color-surface-container-high)', color: 'var(--color-on-surface-variant)' }}
+              >
                 <User className="w-3.5 h-3.5" />
               </div>
             )}
@@ -161,7 +182,16 @@ export function ChatQuery() {
             key={q}
             onClick={() => handleSend(q)}
             disabled={isStreaming}
-            className="text-[11px] px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 border border-zinc-200 dark:border-zinc-700 rounded-xl text-center truncate transition-all disabled:opacity-50 font-medium"
+            className="text-[11px] px-3 py-1.5 rounded-xl text-center truncate transition-all disabled:opacity-50 font-medium cursor-pointer"
+            style={{ background: 'var(--color-surface-container-low)', color: 'var(--color-on-surface-variant)', border: '1px solid var(--color-outline-variant)' }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-primary-fixed)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-on-primary-container)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-surface-container-low)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-on-surface-variant)';
+            }}
             title={q}
           >
             {q}
@@ -179,16 +209,30 @@ export function ChatQuery() {
       >
         <input
           type="text"
-          placeholder="Preguntale a Aleph sobre tus gastos..."
+          placeholder="Preguntale a Pockit AI sobre tus gastos..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={isStreaming}
-          className="w-full pl-4 pr-11 py-2.5 bg-zinc-50 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all disabled:opacity-50"
+          className="w-full pl-4 pr-11 py-2.5 rounded-2xl text-xs disabled:opacity-50 outline-none transition-all"
+          style={{
+            background: 'var(--color-surface-container-low)',
+            border: '1px solid var(--color-outline-variant)',
+            color: 'var(--color-on-surface)',
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-primary-container)';
+            e.currentTarget.style.boxShadow = '0 0 0 2px rgba(201, 138, 44, 0.2)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'var(--color-outline-variant)';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
         />
         <button
           type="submit"
           disabled={!input.trim() || isStreaming}
-          className="absolute right-1.5 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl disabled:opacity-40 transition-all"
+          className="absolute right-1.5 p-1.5 rounded-xl disabled:opacity-40 transition-all cursor-pointer"
+          style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
         >
           {isStreaming ? (
             <Loader2 className="w-4 h-4 animate-spin" />

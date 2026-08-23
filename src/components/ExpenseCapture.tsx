@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Camera, Mic, Square, Upload, Loader2, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Camera, Mic, Square, Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Expense } from '@/types/expense';
 
 interface ExpenseCaptureProps {
@@ -226,87 +226,70 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
     }
   };
 
+  const tabStyle = (active: boolean) => active
+    ? { background: 'var(--color-primary-fixed)', color: 'var(--color-on-primary-container)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }
+    : { color: 'var(--color-on-surface-variant)' };
+
+  const inputStyle = {
+    background: 'var(--color-surface-container-low)',
+    border: '1px solid var(--color-outline-variant)',
+    color: 'var(--color-on-surface)',
+  };
+
   return (
-    <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl shadow-zinc-200/50 dark:shadow-black/50 transition-all">
-      <div className="flex items-center justify-between mb-6">
+    <div
+      className="rounded-3xl p-5 transition-all"
+      style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-card)', border: '1px solid var(--color-outline-variant)' }}
+    >
+      {/* TITLE + TAB SWITCHER */}
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-indigo-500 animate-pulse" />
+          <h2 className="text-base font-bold flex items-center gap-2" style={{ color: 'var(--color-on-surface)' }}>
             Cargar Gasto
           </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-neutral)' }}>
             Inferencia local con QVAC (OCR, Whisper y Llama 3.2)
           </p>
         </div>
 
-        <div className="flex bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl">
-          <button
-            onClick={() => {
-              setTab('foto');
-              setError(null);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              tab === 'foto'
-                ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
-            }`}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            Foto Ticket
-          </button>
-          <button
-            onClick={() => {
-              setTab('voz');
-              setError(null);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              tab === 'voz'
-                ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
-            }`}
-          >
-            <Mic className="w-3.5 h-3.5" />
-            Voz
-          </button>
-          <button
-            onClick={() => {
-              setTab('manual');
-              setError(null);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              tab === 'manual'
-                ? 'bg-white dark:bg-zinc-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
-            }`}
-          >
-            Manual
-          </button>
+        <div className="flex p-1 rounded-xl gap-0.5" style={{ background: 'var(--color-surface-container-high)' }}>
+          {(['foto', 'voz', 'manual'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => { setTab(t); setError(null); }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+              style={tabStyle(tab === t)}
+            >
+              {t === 'foto' && <Camera className="w-3.5 h-3.5" />}
+              {t === 'voz' && <Mic className="w-3.5 h-3.5" />}
+              {t === 'foto' ? 'Foto' : t === 'voz' ? 'Voz' : 'Manual'}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* ERROR */}
       {error && (
-        <div className="mb-4 p-3.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+        <div className="mb-4 p-3.5 rounded-xl text-xs flex items-center gap-2" style={{ background: 'var(--color-error-container)', border: '1px solid rgba(186,26,26,0.3)', color: 'var(--color-error)' }}>
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
+      {/* SUCCESS */}
       {successInfo && (
-        <div className="mb-4 p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
+        <div className="mb-4 p-3.5 rounded-xl text-xs flex items-center justify-between" style={{ background: 'var(--color-secondary-fixed)', border: '1px solid var(--color-secondary-container)', color: 'var(--color-secondary)' }}>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{successInfo}</span>
           </div>
-          <button
-            onClick={() => setSuccessInfo(null)}
-            className="text-xs underline hover:opacity-80"
-          >
+          <button onClick={() => setSuccessInfo(null)} className="text-xs underline hover:opacity-80 ml-4">
             Cerrar
           </button>
         </div>
       )}
 
-      {/* TAB FOTO */}
+      {/* TAB: FOTO */}
       {tab === 'foto' && (
         <div className="space-y-4">
           <input
@@ -320,20 +303,23 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
           {!imagePreview ? (
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-2xl p-8 text-center cursor-pointer transition-all bg-zinc-50/50 dark:bg-zinc-800/30 group"
+              className="border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all group"
+              style={{ borderColor: 'var(--color-outline-variant)', background: 'var(--color-surface-container-low)' }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-primary-container)')}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-outline-variant)')}
             >
-              <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform" style={{ background: 'var(--color-primary-fixed)', color: 'var(--color-primary)' }}>
                 <Upload className="w-6 h-6" />
               </div>
-              <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+              <p className="text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>
                 Arrastrá o hacé clic para subir ticket
               </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                PNG, JPG, BMP • Extracción vía ONNX OCR local
+              <p className="text-xs mt-1" style={{ color: 'var(--color-neutral)' }}>
+                PNG, JPG, BMP · Extracción vía ONNX OCR local
               </p>
             </div>
           ) : (
-            <div className="relative rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-black/5">
+            <div className="relative rounded-2xl overflow-hidden" style={{ border: '1px solid var(--color-outline-variant)' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imagePreview}
@@ -341,11 +327,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                 className="max-h-60 w-full object-contain mx-auto"
               />
               <button
-                onClick={() => {
-                  setImagePreview(null);
-                  setSelectedFile(null);
-                }}
-                className="absolute top-2 right-2 bg-black/70 hover:bg-black text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-md"
+                onClick={() => { setImagePreview(null); setSelectedFile(null); }}
+                className="absolute top-2 right-2 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-md"
+                style={{ background: 'rgba(32,27,20,0.75)' }}
               >
                 Cambiar foto
               </button>
@@ -356,7 +340,8 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
             <button
               onClick={handleProcessImage}
               disabled={isProcessing}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full py-3 font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+              style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
             >
               {isProcessing ? (
                 <>
@@ -365,7 +350,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <Camera className="w-4 h-4" />
                   <span>Procesar Ticket con QVAC</span>
                 </>
               )}
@@ -374,39 +359,40 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
         </div>
       )}
 
-      {/* TAB VOZ */}
+      {/* TAB: VOZ */}
       {tab === 'voz' && (
         <div className="space-y-4 text-center">
-          <div className="py-8 bg-zinc-50/50 dark:bg-zinc-800/30 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center justify-center">
+          <div className="py-8 rounded-2xl flex flex-col items-center justify-center" style={{ background: 'var(--color-surface-container-low)', border: '1px solid var(--color-outline-variant)' }}>
             <button
               onClick={isRecording ? stopRecording : startRecording}
-              className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg ${
-                isRecording
-                  ? 'bg-rose-600 text-white animate-pulse shadow-rose-500/30 ring-4 ring-rose-300 dark:ring-rose-900'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/25 hover:scale-105'
+              className={`w-20 h-20 rounded-full flex items-center justify-center transition-all shadow-lg cursor-pointer ${
+                isRecording ? 'animate-pulse' : 'hover:scale-105'
               }`}
+              style={
+                isRecording
+                  ? { background: 'var(--color-error)', color: 'var(--color-on-error)', outline: '4px solid rgba(186,26,26,0.3)' }
+                  : { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
+              }
             >
               {isRecording ? <Square className="w-7 h-7" /> : <Mic className="w-8 h-8" />}
             </button>
-            <p className="mt-4 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+            <p className="mt-4 text-sm font-semibold" style={{ color: 'var(--color-on-surface)' }}>
               {isRecording
                 ? 'Grabando audio... Hablá claro (ej: "Gasté 4500 en la farmacia")'
                 : 'Tocá para grabar nota de voz'}
             </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            <p className="text-xs mt-1" style={{ color: 'var(--color-neutral)' }}>
               Transcripción en español vía Whisper local
             </p>
           </div>
 
           {audioUrl && !isRecording && (
-            <div className="p-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl flex items-center justify-between">
+            <div className="p-3 rounded-xl flex items-center justify-between" style={{ background: 'var(--color-surface-container-high)' }}>
               <audio src={audioUrl} controls className="h-8 max-w-[220px]" />
               <button
-                onClick={() => {
-                  setAudioBlob(null);
-                  setAudioUrl(null);
-                }}
-                className="text-xs text-zinc-500 hover:text-rose-500 ml-2"
+                onClick={() => { setAudioBlob(null); setAudioUrl(null); }}
+                className="text-xs ml-2 hover:opacity-80"
+                style={{ color: 'var(--color-neutral)' }}
               >
                 Descartar
               </button>
@@ -417,7 +403,8 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
             <button
               onClick={handleProcessAudio}
               disabled={isProcessing}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="w-full py-3 font-semibold rounded-xl text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+              style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
             >
               {isProcessing ? (
                 <>
@@ -426,7 +413,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <Mic className="w-4 h-4" />
                   <span>Procesar Audio con QVAC</span>
                 </>
               )}
@@ -435,11 +422,11 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
         </div>
       )}
 
-      {/* TAB MANUAL */}
+      {/* TAB: MANUAL */}
       {tab === 'manual' && (
         <form onSubmit={handleManualSubmit} className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-on-surface-variant)' }}>
               Monto ($)
             </label>
             <input
@@ -449,18 +436,24 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
               placeholder="0.00"
               value={manualMonto}
               onChange={(e) => setManualMonto(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-xl text-sm outline-none transition-all"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary-container)'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(201,138,44,0.2)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-outline-variant)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-on-surface-variant)' }}>
               Categoría
             </label>
             <select
               value={manualCat}
               onChange={(e) => setManualCat(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-xl text-sm outline-none transition-all"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary-container)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-outline-variant)'; }}
             >
               <option>Alimentación</option>
               <option>Transporte</option>
@@ -475,7 +468,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--color-on-surface-variant)' }}>
               Descripción
             </label>
             <input
@@ -483,14 +476,18 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
               placeholder="Ej: Café con medialunas"
               value={manualDesc}
               onChange={(e) => setManualDesc(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 rounded-xl text-sm outline-none transition-all"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary-container)'; e.currentTarget.style.boxShadow = '0 0 0 2px rgba(201,138,44,0.2)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-outline-variant)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
 
           <button
             type="submit"
             disabled={isProcessing}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm shadow-md transition-all disabled:opacity-50 mt-2"
+            className="w-full py-2.5 font-semibold rounded-xl text-sm transition-all disabled:opacity-50 mt-2 cursor-pointer"
+            style={{ background: 'var(--color-primary)', color: 'var(--color-on-primary)' }}
           >
             {isProcessing ? 'Guardando...' : 'Guardar Gasto'}
           </button>

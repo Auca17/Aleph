@@ -9,16 +9,30 @@ interface ExpenseListProps {
   onExpenseDeleted: (id: string) => void;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Alimentación: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  Transporte: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  Servicios: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-  Salud: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-  Entretenimiento: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800',
-  Indumentaria: 'bg-pink-100 text-pink-800 dark:bg-pink-950/60 dark:text-pink-300 border-pink-200 dark:border-pink-800',
-  Tecnología: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
-  Hogar: 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 border-orange-200 dark:border-orange-800',
-  Otros: 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'
+// Using warm-palette chip colors that align with the Pockit design system
+const CATEGORY_STYLES: Record<string, { bg: string; color: string; border: string }> = {
+  Alimentación: { bg: '#FFF3DC', color: '#845400', border: '#C98A2C' },
+  Transporte:   { bg: '#E3F0FA', color: '#006491', border: '#4A9ED3' },
+  Servicios:    { bg: '#E3F2E6', color: '#44664B', border: '#6B8F71' },
+  Salud:        { bg: '#FDECEA', color: '#BA1A1A', border: '#FFDAD6' },
+  Entretenimiento: { bg: '#EFE8F8', color: '#5B3E91', border: '#C4ADEA' },
+  Indumentaria: { bg: '#FDE8F0', color: '#8B1D50', border: '#E8ADCC' },
+  Tecnología:   { bg: '#E0F4F8', color: '#00546B', border: '#8ACFE0' },
+  Hogar:        { bg: '#FEF0E3', color: '#7A3A00', border: '#E8A870' },
+  Otros:        { bg: '#F3EDE8', color: '#514536', border: '#D6C4B1' },
+};
+
+// Bar colors for the distribution chart
+const CATEGORY_BAR_COLOR: Record<string, string> = {
+  Alimentación: '#C98A2C',
+  Transporte:   '#4A9ED3',
+  Servicios:    '#6B8F71',
+  Salud:        '#BA1A1A',
+  Entretenimiento: '#7C5CBF',
+  Indumentaria: '#C0648A',
+  Tecnología:   '#2A9BB5',
+  Hogar:        '#D07A30',
+  Otros:        '#7F756C',
 };
 
 export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
@@ -61,29 +75,36 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
     (a, b) => b[1] - a[1]
   );
 
+  const cardStyle = {
+    background: 'var(--color-surface)',
+    boxShadow: 'var(--shadow-card)',
+    border: '1px solid var(--color-outline-variant)',
+  };
+
   return (
     <div className="space-y-4">
       {/* STATS HEADER */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Total Gastado</p>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1 flex items-center">
-            <DollarSign className="w-5 h-5 text-indigo-500 inline" />
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-neutral)' }}>Total Gastado</p>
+          <p className="text-2xl font-bold mt-1 flex items-center" style={{ color: 'var(--color-on-surface)' }}>
+            <DollarSign className="w-5 h-5 inline" style={{ color: 'var(--color-primary-container)' }} />
             {totalSpent.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
           </p>
         </div>
 
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Total Registros</p>
-          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
-            {expenses.length} <span className="text-xs font-normal text-zinc-500">gastos</span>
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-neutral)' }}>Total Registros</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: 'var(--color-on-surface)' }}>
+            {expenses.length}{' '}
+            <span className="text-xs font-normal" style={{ color: 'var(--color-neutral)' }}>gastos</span>
           </p>
         </div>
 
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Anomalías Detectadas</p>
-          <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1.5">
-            <AlertTriangle className="w-5 h-5 inline text-rose-500" />
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="text-xs font-medium" style={{ color: 'var(--color-neutral)' }}>Anomalías Detectadas</p>
+          <p className="text-2xl font-bold mt-1 flex items-center gap-1.5" style={{ color: 'var(--color-error)' }}>
+            <AlertTriangle className="w-5 h-5 inline" />
             {anomalyCount}
           </p>
         </div>
@@ -91,51 +112,35 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
 
       {/* CATEGORY SPENDING BREAKDOWN */}
       {expenses.length > 0 && (
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
-          <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+        <div className="rounded-2xl p-4" style={cardStyle}>
+          <p className="text-xs font-semibold mb-3" style={{ color: 'var(--color-on-surface-variant)' }}>
             Distribución de Gastos por Categoría
           </p>
-          <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
+          <div className="h-3 w-full rounded-full overflow-hidden flex" style={{ background: 'var(--color-surface-container-high)' }}>
             {sortedCategories.map(([cat, amount]) => {
               const pct = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
-              const bgClass =
-                cat === 'Alimentación'
-                  ? 'bg-amber-500'
-                  : cat === 'Transporte'
-                  ? 'bg-blue-500'
-                  : cat === 'Servicios'
-                  ? 'bg-emerald-500'
-                  : cat === 'Salud'
-                  ? 'bg-rose-500'
-                  : cat === 'Entretenimiento'
-                  ? 'bg-purple-500'
-                  : cat === 'Indumentaria'
-                  ? 'bg-pink-500'
-                  : cat === 'Tecnología'
-                  ? 'bg-cyan-500'
-                  : cat === 'Hogar'
-                  ? 'bg-orange-500'
-                  : 'bg-zinc-400';
-
+              const barColor = CATEGORY_BAR_COLOR[cat] || '#7F756C';
               return (
                 <div
                   key={cat}
-                  style={{ width: `${pct}%` }}
-                  className={`h-full ${bgClass} transition-all`}
+                  style={{ width: `${pct}%`, background: barColor }}
+                  className="h-full transition-all"
                   title={`${cat}: $${amount.toLocaleString('es-AR')} (${pct.toFixed(1)}%)`}
                 />
               );
             })}
           </div>
 
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
             {sortedCategories.map(([cat, amount]) => {
               const pct = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
+              const barColor = CATEGORY_BAR_COLOR[cat] || '#7F756C';
               return (
-                <div key={cat} className="flex items-center gap-1.5 text-[11px] text-zinc-600 dark:text-zinc-400">
-                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{cat}:</span>
+                <div key={cat} className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--color-on-surface-variant)' }}>
+                  <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: barColor }} />
+                  <span className="font-semibold" style={{ color: 'var(--color-on-surface)' }}>{cat}:</span>
                   <span>${amount.toLocaleString('es-AR', { maximumFractionDigits: 0 })}</span>
-                  <span className="text-[10px] text-zinc-400">({pct.toFixed(0)}%)</span>
+                  <span style={{ color: 'var(--color-neutral)' }}>({pct.toFixed(0)}%)</span>
                 </div>
               );
             })}
@@ -144,27 +149,31 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
       )}
 
       {/* FILTER BAR */}
-      <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-2.5 items-center justify-between">
+      <div className="rounded-2xl p-3 flex flex-col sm:flex-row gap-2.5 items-center justify-between" style={cardStyle}>
         <div className="relative w-full sm:w-64">
-          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--color-neutral)' }} />
           <input
             type="text"
             placeholder="Buscar gasto o comercio..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl text-xs outline-none transition-all"
+            style={{ background: 'var(--color-surface-container-low)', border: '1px solid var(--color-outline-variant)', color: 'var(--color-on-surface)' }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--color-primary-container)'; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--color-outline-variant)'; }}
           />
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-          <Filter className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          <Filter className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--color-neutral)' }} />
           <button
             onClick={() => setSelectedCat('all')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-all ${
+            className="px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-all cursor-pointer"
+            style={
               selectedCat === 'all'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
-            }`}
+                ? { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
+                : { background: 'var(--color-surface-container-low)', color: 'var(--color-on-surface-variant)' }
+            }
           >
             Todos
           </button>
@@ -172,11 +181,12 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
             <button
               key={cat}
               onClick={() => setSelectedCat(cat)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-all ${
+              className="px-2.5 py-1 rounded-lg text-xs font-medium shrink-0 transition-all cursor-pointer"
+              style={
                 selectedCat === cat
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
-              }`}
+                  ? { background: 'var(--color-primary)', color: 'var(--color-on-primary)' }
+                  : { background: 'var(--color-surface-container-low)', color: 'var(--color-on-surface-variant)' }
+              }
             >
               {cat}
             </button>
@@ -187,13 +197,12 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
       {/* EXPENSES LIST */}
       <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 bg-white/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">No se encontraron gastos</p>
+          <div className="text-center py-12 rounded-2xl" style={{ background: 'var(--color-surface-container-low)', border: '1px solid var(--color-outline-variant)' }}>
+            <p className="text-sm" style={{ color: 'var(--color-neutral)' }}>No se encontraron gastos</p>
           </div>
         ) : (
           filtered.map((exp, idx) => {
-            const badgeColor =
-              CATEGORY_COLORS[exp.categoria] || CATEGORY_COLORS['Otros'];
+            const chipStyle = CATEGORY_STYLES[exp.categoria] || CATEGORY_STYLES['Otros'];
             const formattedDate = new Date(exp.fecha).toLocaleDateString('es-AR', {
               day: '2-digit',
               month: 'short',
@@ -203,21 +212,36 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
             return (
               <div
                 key={exp.id || `expense-${idx}-${exp.fecha}`}
-                className={`bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all flex items-center justify-between group hover:border-indigo-400 dark:hover:border-indigo-600 ${
-                  exp.flag_anomalia
-                    ? 'border-rose-300 dark:border-rose-800/80 bg-rose-50/30 dark:bg-rose-950/20'
-                    : 'border-zinc-200 dark:border-zinc-800'
-                }`}
+                className="rounded-2xl p-4 flex items-center justify-between group transition-all"
+                style={{
+                  background: exp.flag_anomalia ? 'rgba(186,26,26,0.04)' : 'var(--color-surface)',
+                  boxShadow: 'var(--shadow-card)',
+                  border: exp.flag_anomalia
+                    ? '1px solid rgba(186,26,26,0.3)'
+                    : '1px solid var(--color-outline-variant)',
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = exp.flag_anomalia ? 'rgba(186,26,26,0.5)' : 'var(--color-primary-container)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = exp.flag_anomalia ? 'rgba(186,26,26,0.3)' : 'var(--color-outline-variant)';
+                }}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      exp.fuente === 'foto'
-                        ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300'
+                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                    style={{
+                      background: exp.fuente === 'foto'
+                        ? '#EFE8F8'
                         : exp.fuente === 'voz'
-                        ? 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300'
-                        : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
-                    }`}
+                        ? '#E3F0FA'
+                        : 'var(--color-surface-container-high)',
+                      color: exp.fuente === 'foto'
+                        ? '#5B3E91'
+                        : exp.fuente === 'voz'
+                        ? '#006491'
+                        : 'var(--color-on-surface-variant)',
+                    }}
                   >
                     {exp.fuente === 'foto' && <Camera className="w-5 h-5" />}
                     {exp.fuente === 'voz' && <Mic className="w-5 h-5" />}
@@ -225,26 +249,27 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
                   </div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-on-surface)' }}>
                         {exp.descripcion || exp.categoria}
                       </p>
                       {exp.flag_anomalia && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 dark:bg-rose-900/80 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shrink-0 animate-pulse">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 animate-pulse" style={{ background: 'var(--color-error-container)', color: 'var(--color-error)', border: '1px solid rgba(186,26,26,0.3)' }}>
                           <AlertTriangle className="w-3 h-3" />
                           Anomalía (Gasto Alto)
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${badgeColor}`}
+                        className="text-[10px] font-semibold px-2 py-0.5 rounded-md"
+                        style={{ background: chipStyle.bg, color: chipStyle.color, border: `1px solid ${chipStyle.border}` }}
                       >
                         {exp.categoria}
                       </span>
-                      <span className="text-xs text-zinc-400">• {formattedDate}</span>
+                      <span className="text-xs" style={{ color: 'var(--color-neutral)' }}>· {formattedDate}</span>
                       {exp.raw_text && (
-                        <span className="text-[10px] text-zinc-400 truncate max-w-[150px] hidden md:inline">
+                        <span className="text-[10px] truncate max-w-[150px] hidden md:inline" style={{ color: 'var(--color-neutral)' }}>
                           &quot;{exp.raw_text}&quot;
                         </span>
                       )}
@@ -253,13 +278,22 @@ export function ExpenseList({ expenses, onExpenseDeleted }: ExpenseListProps) {
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-base font-bold text-zinc-900 dark:text-zinc-50">
+                  <span className="text-base font-bold" style={{ color: 'var(--color-on-surface)' }}>
                     ${exp.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
                   </span>
 
                   <button
                     onClick={() => handleDelete(exp.id)}
-                    className="p-1.5 text-zinc-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 opacity-0 group-hover:opacity-100 transition-all"
+                    className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                    style={{ color: 'var(--color-neutral)' }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-error)';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-error-container)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-neutral)';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                    }}
                     title="Eliminar gasto"
                   >
                     <Trash2 className="w-4 h-4" />
