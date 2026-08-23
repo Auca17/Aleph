@@ -7,7 +7,8 @@ import { supabase, localStore } from '@/lib/supabase/client';
  */
 export async function calculateAnomaly(
   monto: number,
-  categoria: string
+  categoria: string,
+  userEmail?: string | null
 ): Promise<{ isAnomaly: boolean; average: number; count: number }> {
   let amounts: number[] = [];
 
@@ -26,7 +27,7 @@ export async function calculateAnomaly(
 
   // Fallback to local store if Supabase returned no data
   if (amounts.length === 0) {
-    const localRecords = await localStore.getExpensesByCategory(categoria);
+    const localRecords = await localStore.getExpensesByCategory(categoria, userEmail);
     amounts = localRecords.map((r) => r.monto);
   }
 

@@ -8,13 +8,17 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function getRequestUserEmail(req: NextRequest): string | null {
+  return req.headers.get('x-pockit-user-email');
+}
+
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const success = await removeExpense(id);
+    const success = await removeExpense(id, getRequestUserEmail(req));
 
     if (!success) {
       return NextResponse.json(
@@ -69,7 +73,8 @@ export async function PATCH(
       );
     }
 
-    const anomalyResult = await calculateAnomaly(monto, categoria);
+    const userEmail = getRequestUserEmail(req);
+    const anomalyResult = await calculateAnomaly(monto, categoria, userEmail);
     const updated = await updateExpense(id, {
       monto,
       categoria,
@@ -80,7 +85,7 @@ export async function PATCH(
       created_at: createdAt,
       reviewed,
       flag_anomalia: anomalyResult.isAnomaly
-    });
+    }, userEmail);
 
     if (!updated) {
       return NextResponse.json(

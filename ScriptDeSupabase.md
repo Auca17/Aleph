@@ -1,7 +1,7 @@
 ##Script de supabase para su funcionamiento
 
 -- ==========================================
--- SCRIPT DE INICIALIZACIÓN DE SUPABASE - ALEPH
+-- SCRIPT DE INICIALIZACIÓN DE SUPABASE - POCKIT
 -- ==========================================
 
 -- 1. Habilitar extensión para generación de UUIDs si no existe

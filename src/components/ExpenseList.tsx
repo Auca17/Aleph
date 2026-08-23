@@ -8,6 +8,7 @@ interface ExpenseListProps {
   expenses: Expense[];
   onExpenseDeleted: (id: string) => void;
   onExpenseUpdated: (expense: Expense) => void;
+  userEmail?: string;
 }
 
 interface EditForm {
@@ -45,7 +46,7 @@ function needsReview(expense: Expense): boolean {
   return !expense.reviewed && (expense.monto <= 0 || expense.categoria === 'Otros');
 }
 
-export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: ExpenseListProps) {
+export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated, userEmail }: ExpenseListProps) {
   const [selectedCat, setSelectedCat] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -57,6 +58,9 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
   });
   const [editError, setEditError] = useState<string | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const userHeaders: Record<string, string> = userEmail
+    ? { 'x-pockit-user-email': userEmail }
+    : {};
   const editingExpense = editingId
     ? expenses.find((expense) => expense.id === editingId)
     : undefined;
@@ -82,7 +86,10 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
   const handleDelete = async (id?: string) => {
     if (!id) return;
     try {
-      const res = await fetch(`/api/gastos/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/gastos/${id}`, {
+        method: 'DELETE',
+        headers: userHeaders
+      });
       if (res.ok || res.status === 404) {
         onExpenseDeleted(id);
       }
@@ -122,7 +129,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
 
       const res = await fetch(`/api/gastos/${editingId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...userHeaders },
         body: JSON.stringify({
           monto: Number(editForm.monto),
           categoria: editForm.categoria,
@@ -170,10 +177,10 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
   );
 
   return (
-    <div className="space-y-4">
+    <div className="expense-registry-palette space-y-4">
       {/* STATS HEADER */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+        <div className="registry-card bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Total Gastado</p>
           <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1 flex items-center">
             <DollarSign className="w-5 h-5 text-indigo-500 inline" />
@@ -181,7 +188,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
           </p>
         </div>
 
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+        <div className="registry-card bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Total Registros</p>
           <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 mt-1">
             {expenses.length} <span className="text-xs font-normal text-zinc-500">gastos</span>
@@ -191,7 +198,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
         <button
           type="button"
           onClick={() => setSelectedCat('review')}
-          className={`text-left bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all hover:border-amber-400 dark:hover:border-amber-600 ${
+          className={`registry-card text-left bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all hover:border-amber-400 dark:hover:border-amber-600 ${
             selectedCat === 'review'
               ? 'border-amber-400 dark:border-amber-600 ring-2 ring-amber-200/70 dark:ring-amber-900/50'
               : 'border-amber-200 dark:border-amber-900/70'
@@ -208,7 +215,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
         <button
           type="button"
           onClick={() => setSelectedCat('anomalies')}
-          className={`text-left bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all hover:border-rose-400 dark:hover:border-rose-700 ${
+          className={`registry-card text-left bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all hover:border-rose-400 dark:hover:border-rose-700 ${
             selectedCat === 'anomalies'
               ? 'border-rose-400 dark:border-rose-700 ring-2 ring-rose-200/70 dark:ring-rose-900/50'
               : 'border-zinc-200 dark:border-zinc-800'
@@ -225,7 +232,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
 
       {/* CATEGORY SPENDING BREAKDOWN */}
       {expenses.length > 0 && (
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+        <div className="registry-card bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
           <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
             Distribución de Gastos por Categoría
           </p>
@@ -278,7 +285,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
       )}
 
       {/* FILTER BAR */}
-      <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-2.5 items-center justify-between">
+      <div className="registry-card bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 shadow-sm flex flex-col sm:flex-row gap-2.5 items-center justify-between">
         <div className="relative w-full sm:flex-1">
           <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -308,7 +315,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
       </div>
 
       {(selectedCat === 'review' || selectedCat === 'anomalies') && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/70 px-4 py-3 text-xs">
+        <div className="registry-card flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-900/70 px-4 py-3 text-xs">
           <span className="font-semibold text-zinc-700 dark:text-zinc-200">
             Viendo: {activeFilterLabel} ({filtered.length})
           </span>
@@ -325,7 +332,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
       {/* EXPENSES LIST */}
       <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 bg-white/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+          <div className="registry-card text-center py-12 bg-white/50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800">
             <p className="text-sm text-zinc-500 dark:text-zinc-400">No se encontraron gastos</p>
           </div>
         ) : (
@@ -343,7 +350,7 @@ export function ExpenseList({ expenses, onExpenseDeleted, onExpenseUpdated }: Ex
             return (
               <div
                 key={exp.id || `${exp.fecha}-${exp.categoria}-${exp.monto}`}
-                className={`bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all flex items-center justify-between group hover:border-indigo-400 dark:hover:border-indigo-600 ${
+                className={`registry-card bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border rounded-2xl p-4 shadow-sm transition-all flex items-center justify-between group hover:border-indigo-400 dark:hover:border-indigo-600 ${
                   exp.flag_anomalia
                     ? 'border-rose-300 dark:border-rose-800/80 bg-rose-50/30 dark:bg-rose-950/20'
                   : reviewNeeded

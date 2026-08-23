@@ -3,9 +3,13 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchIngresos, insertIngreso } from '@/lib/supabase/client';
 
-export async function GET() {
+function getRequestUserEmail(req: NextRequest): string | null {
+  return req.headers.get('x-pockit-user-email');
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const data = await fetchIngresos();
+    const data = await fetchIngresos(getRequestUserEmail(req));
     return NextResponse.json({ success: true, data });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error obteniendo ingresos';
@@ -18,6 +22,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const userEmail = getRequestUserEmail(req);
     const body = await req.json();
     const { monto, categoria, fecha, fuente, descripcion } = body;
 
@@ -28,13 +33,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const nuevoIngreso = await insertIngreso({
-      monto: Number(monto),
-      categoria: categoria || 'Otros',
-      fecha: fecha || new Date().toISOString(),
-      fuente: fuente || 'manual',
-      descripcion: descripcion || ''
-    });
+    const nuevoIngreso = await insertIngreso(
+      {
+        monto: Number(monto),
+        categoria: categoria || 'Otros',
+        fecha: fecha || new Date().toISOString(),
+        fuente: fuente || 'manual',
+        descripcion: descripcion || ''
+      },
+      userEmail
+    );
 
     return NextResponse.json({ success: true, data: nuevoIngreso });
   } catch (error: unknown) {

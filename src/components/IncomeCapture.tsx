@@ -6,14 +6,18 @@ import { Ingreso } from '@/types/ingreso';
 
 interface IncomeCaptureProps {
   onIncomeAdded: (newIncome: Ingreso) => void;
+  userEmail?: string;
 }
 
-export function IncomeCapture({ onIncomeAdded }: IncomeCaptureProps) {
+export function IncomeCapture({ onIncomeAdded, userEmail }: IncomeCaptureProps) {
   const [monto, setMonto] = useState('');
   const [categoria, setCategoria] = useState('Freelance');
   const [descripcion, setDescripcion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const userHeaders: Record<string, string> = userEmail
+    ? { 'x-pockit-user-email': userEmail }
+    : {};
 
   const categories = [
     'Freelance',
@@ -38,7 +42,7 @@ export function IncomeCapture({ onIncomeAdded }: IncomeCaptureProps) {
     try {
       const res = await fetch('/api/ingresos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...userHeaders },
         body: JSON.stringify({
           monto: parsedMonto,
           categoria,

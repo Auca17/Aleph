@@ -15,6 +15,10 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function getRequestUserEmail(req: NextRequest): string | null {
+  return req.headers.get('x-pockit-user-email');
+}
+
 function getPhotoAmountConfidence(rawText: string, monto: number) {
   const reasons: string[] = [];
   const hasTotalLabel =
@@ -62,9 +66,9 @@ function getPhotoAmountConfidence(rawText: string, monto: number) {
   };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const expenses = await fetchExpenses();
+    const expenses = await fetchExpenses(getRequestUserEmail(req));
     return NextResponse.json({ success: true, data: expenses });
   } catch (error: unknown) {
     console.error('Error fetching expenses:', error);
@@ -79,6 +83,7 @@ export async function POST(req: NextRequest) {
   let tempFilePath: string | null = null;
 
   try {
+    const userEmail = getRequestUserEmail(req);
     const contentType = req.headers.get('content-type') || '';
     let fuente: ExpenseSource = 'manual';
     let rawText = '';
@@ -109,7 +114,7 @@ export async function POST(req: NextRequest) {
       if (file) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const tempDir = join(tmpdir(), 'aleph-uploads');
+        const tempDir = join(tmpdir(), 'pockit-uploads');
         await mkdir(tempDir, { recursive: true });
 
         const ext = file.name.split('.').pop() || (fuente === 'foto' ? 'png' : 'wav');
@@ -169,7 +174,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate Anomaly in deterministic code
-    const anomalyResult = await calculateAnomaly(parsed.monto, parsed.categoria);
+    const anomalyResult = await calculateAnomaly(parsed.monto, parsed.categoria, userEmail);
 
     const newExpense: Omit<Expense, 'id'> = {
       monto: parsed.monto,
@@ -181,7 +186,7 @@ export async function POST(req: NextRequest) {
       descripcion: parsed.descripcion
     };
 
-    const savedExpense = await insertExpense(newExpense);
+    const savedExpense = await insertExpense(newExpense, userEmail);
 
     return NextResponse.json({
       success: true,

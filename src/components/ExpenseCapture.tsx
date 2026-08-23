@@ -6,6 +6,7 @@ import { Expense } from '@/types/expense';
 
 interface ExpenseCaptureProps {
   onExpenseAdded: (expense: Expense) => void;
+  userEmail?: string;
 }
 
 interface PhotoConfidence {
@@ -107,7 +108,7 @@ function encodeWav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
-export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
+export function ExpenseCapture({ onExpenseAdded, userEmail }: ExpenseCaptureProps) {
   const [tab, setTab] = useState<'foto' | 'voz' | 'manual'>('foto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processStep, setProcessStep] = useState<string>('');
@@ -136,6 +137,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
   const audioChunksRef = useRef<Float32Array[]>([]);
   const audioSampleRateRef = useRef(TARGET_SAMPLE_RATE);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const userHeaders: Record<string, string> = userEmail
+    ? { 'x-pockit-user-email': userEmail }
+    : {};
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -247,6 +251,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
 
       const res = await fetch('/api/gastos', {
         method: 'POST',
+        headers: userHeaders,
         body: formData
       });
 
@@ -296,7 +301,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
     try {
       const res = await fetch('/api/gastos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...userHeaders },
         body: JSON.stringify({
           fuente: 'foto',
           text: photoAnalysis.rawText,
@@ -365,6 +370,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
 
       const res = await fetch('/api/gastos', {
         method: 'POST',
+        headers: userHeaders,
         body: formData
       });
 
@@ -400,7 +406,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
     try {
       const res = await fetch('/api/gastos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...userHeaders },
         body: JSON.stringify({
           fuente: 'manual',
           monto: parseFloat(manualMonto),
@@ -427,7 +433,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
   };
 
   return (
-    <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl shadow-zinc-200/50 dark:shadow-black/50 transition-all">
+    <div className="expense-capture-palette bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 shadow-xl shadow-zinc-200/50 dark:shadow-black/50 transition-all">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
