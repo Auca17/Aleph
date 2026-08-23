@@ -32,6 +32,10 @@ CREATE POLICY "Permitir insercion publica" ON public.gastos
 CREATE POLICY "Permitir eliminacion publica" ON public.gastos
   FOR DELETE USING (true);
 
+-- Política de actualización pública (para demo local)
+CREATE POLICY "Permitir actualizacion publica" ON public.gastos
+  FOR UPDATE USING (true) WITH CHECK (true);
+
 -- Tabla ingresos para Pockit (QVAC Hackathon 2026)
 CREATE TABLE IF NOT EXISTS public.ingresos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,4 +55,4 @@ ALTER TABLE public.ingresos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Permitir lectura publica de ingresos" ON public.ingresos FOR SELECT USING (true);
 CREATE POLICY "Permitir insercion publica de ingresos" ON public.ingresos FOR INSERT WITH CHECK (true);
 CREATE POLICY "Permitir eliminacion publica de ingresos" ON public.ingresos FOR DELETE USING (true);
-
+CREATE POLICY "Permitir actualizacion publica de ingresos" ON public.ingresos FOR UPDATE USING (true) WITH CHECK (true);
