@@ -4,10 +4,14 @@ import { Ingreso } from '@/types/ingreso';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const DEMO_USER_EMAIL = 'demo@pockit.ai';
 
-// Fallback in-memory store for seamless local dev & demo without mandatory cloud creds
-class LocalExpenseStore {
-  private expenses: Expense[] = [
+function normalizeUserEmail(userEmail?: string | null): string {
+  return (userEmail || DEMO_USER_EMAIL).trim().toLowerCase();
+}
+
+function createDemoExpenses(): Expense[] {
+  return [
     {
       id: '1',
       monto: 4500,
@@ -39,8 +43,10 @@ class LocalExpenseStore {
       raw_text: 'RESTAURANTE PUERTO MADERO TOTAL: $38000.00'
     }
   ];
+}
 
-  private ingresos: Ingreso[] = [
+function createDemoIngresos(): Ingreso[] {
+  return [
     {
       id: 'ing-1',
       monto: 150000,
@@ -55,38 +61,71 @@ class LocalExpenseStore {
       categoria: 'Honorarios',
       fecha: new Date(Date.now() - 86400000 * 1).toISOString(),
       fuente: 'manual',
-      descripcion: 'Consultoría Financiera Aleph'
+      descripcion: 'Consultoría Financiera Pockit'
     }
   ];
+}
 
-  async getExpenses(): Promise<Expense[]> {
-    return [...this.expenses].sort(
+// Fallback in-memory store for seamless local dev & demo without mandatory cloud creds
+class LocalExpenseStore {
+  private expensesByUser = new Map<string, Expense[]>();
+  private ingresosByUser = new Map<string, Ingreso[]>();
+
+  private getExpenseBucket(userEmail?: string | null): Expense[] {
+    const key = normalizeUserEmail(userEmail);
+    if (!this.expensesByUser.has(key)) {
+      this.expensesByUser.set(key, key === DEMO_USER_EMAIL ? createDemoExpenses() : []);
+    }
+    return this.expensesByUser.get(key) || [];
+  }
+
+  private getIngresoBucket(userEmail?: string | null): Ingreso[] {
+    const key = normalizeUserEmail(userEmail);
+    if (!this.ingresosByUser.has(key)) {
+      this.ingresosByUser.set(key, key === DEMO_USER_EMAIL ? createDemoIngresos() : []);
+    }
+    return this.ingresosByUser.get(key) || [];
+  }
+
+  async getExpenses(userEmail?: string | null): Promise<Expense[]> {
+    return [...this.getExpenseBucket(userEmail)].sort(
       (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
     );
   }
 
-  async getExpensesByCategory(category: string): Promise<Expense[]> {
-    return this.expenses.filter(
+  async getExpensesByCategory(category: string, userEmail?: string | null): Promise<Expense[]> {
+    return this.getExpenseBucket(userEmail).filter(
       (e) => e.categoria.toLowerCase() === category.toLowerCase()
     );
   }
 
-  async addExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
+  async addExpense(expense: Omit<Expense, 'id'>, userEmail?: string | null): Promise<Expense> {
     const newExpense: Expense = {
       ...expense,
       id: crypto.randomUUID()
     };
-    this.expenses.unshift(newExpense);
+    this.getExpenseBucket(userEmail).unshift(newExpense);
     return newExpense;
   }
 
-  async deleteExpense(id: string): Promise<boolean> {
-    this.expenses = this.expenses.filter((e) => e.id !== id);
-    return true;
+  async deleteExpense(id: string, userEmail?: string | null): Promise<boolean> {
+    const bucket = this.getExpenseBucket(userEmail);
+    const prevLen = bucket.length;
+    const nextBucket = bucket.filter((e) => e.id !== id);
+    this.expensesByUser.set(
+      normalizeUserEmail(userEmail),
+      nextBucket
+    );
+    return nextBucket.length < prevLen;
   }
 
-  async updateExpense(id: string, updates: Partial<Expense>): Promise<Expense | null> {
-    const index = this.expenses.findIndex((e) => e.id === id);
+  async updateExpense(
+    id: string,
+    updates: Partial<Expense>,
+    userEmail?: string | null
+  ): Promise<Expense | null> {
+    const bucket = this.getExpenseBucket(userEmail);
+    const index = bucket.findIndex((e) => e.id === id);
     if (index === -1) {
       if (
         typeof updates.monto !== 'number' ||
@@ -108,38 +147,61 @@ class LocalExpenseStore {
         raw_text: updates.raw_text,
         created_at: updates.created_at
       };
-      this.expenses.unshift(insertedExpense);
+      bucket.unshift(insertedExpense);
       return insertedExpense;
     }
 
     const updatedExpense = {
-      ...this.expenses[index],
+      ...bucket[index],
       ...updates,
       id
     };
-    this.expenses[index] = updatedExpense;
+    bucket[index] = updatedExpense;
     return updatedExpense;
   }
 
-  async getIngresos(): Promise<Ingreso[]> {
-    return [...this.ingresos].sort(
+  async getIngresos(userEmail?: string | null): Promise<Ingreso[]> {
+    return [...this.getIngresoBucket(userEmail)].sort(
       (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
     );
   }
 
-  async addIngreso(ingreso: Omit<Ingreso, 'id'>): Promise<Ingreso> {
+  async addIngreso(ingreso: Omit<Ingreso, 'id'>, userEmail?: string | null): Promise<Ingreso> {
     const newIngreso: Ingreso = {
       ...ingreso,
       id: crypto.randomUUID()
     };
-    this.ingresos.unshift(newIngreso);
+    this.getIngresoBucket(userEmail).unshift(newIngreso);
     return newIngreso;
   }
 
-  async deleteIngreso(id: string): Promise<boolean> {
-    const prevLen = this.ingresos.length;
-    this.ingresos = this.ingresos.filter((i) => i.id !== id);
-    return this.ingresos.length < prevLen;
+  async deleteIngreso(id: string, userEmail?: string | null): Promise<boolean> {
+    const bucket = this.getIngresoBucket(userEmail);
+    const prevLen = bucket.length;
+    const nextBucket = bucket.filter((i) => i.id !== id);
+    this.ingresosByUser.set(
+      normalizeUserEmail(userEmail),
+      nextBucket
+    );
+    return nextBucket.length < prevLen;
+  }
+
+  async updateIngreso(
+    id: string,
+    updates: Partial<Ingreso>,
+    userEmail?: string | null
+  ): Promise<Ingreso | null> {
+    const bucket = this.getIngresoBucket(userEmail);
+    const index = bucket.findIndex((i) => i.id === id);
+    if (index === -1) return null;
+
+    const updatedIngreso = {
+      ...bucket[index],
+      ...updates,
+      id
+    };
+    bucket[index] = updatedIngreso;
+    return updatedIngreso;
   }
 }
 
@@ -150,7 +212,7 @@ export const supabase: SupabaseClient | null =
     ? createClient(supabaseUrl, supabaseAnonKey)
     : null;
 
-export async function fetchExpenses(): Promise<Expense[]> {
+export async function fetchExpenses(userEmail?: string | null): Promise<Expense[]> {
   if (supabase) {
     const { data, error } = await supabase
       .from('gastos')
@@ -158,10 +220,13 @@ export async function fetchExpenses(): Promise<Expense[]> {
       .order('fecha', { ascending: false });
     if (!error && data) return data as Expense[];
   }
-  return localStore.getExpenses();
+  return localStore.getExpenses(userEmail);
 }
 
-export async function insertExpense(expense: Omit<Expense, 'id'>): Promise<Expense> {
+export async function insertExpense(
+  expense: Omit<Expense, 'id'>,
+  userEmail?: string | null
+): Promise<Expense> {
   if (supabase) {
     const { data, error } = await supabase
       .from('gastos')
@@ -170,18 +235,18 @@ export async function insertExpense(expense: Omit<Expense, 'id'>): Promise<Expen
       .single();
     if (!error && data) return data as Expense;
   }
-  return localStore.addExpense(expense);
+  return localStore.addExpense(expense, userEmail);
 }
 
-export async function removeExpense(id: string): Promise<boolean> {
+export async function removeExpense(id: string, userEmail?: string | null): Promise<boolean> {
   if (supabase) {
     const { error } = await supabase.from('gastos').delete().eq('id', id);
     return !error;
   }
-  return localStore.deleteExpense(id);
+  return localStore.deleteExpense(id, userEmail);
 }
 
-export async function fetchIngresos(): Promise<Ingreso[]> {
+export async function fetchIngresos(userEmail?: string | null): Promise<Ingreso[]> {
   if (supabase) {
     const { data, error } = await supabase
       .from('ingresos')
@@ -189,10 +254,13 @@ export async function fetchIngresos(): Promise<Ingreso[]> {
       .order('fecha', { ascending: false });
     if (!error && data) return data as Ingreso[];
   }
-  return localStore.getIngresos();
+  return localStore.getIngresos(userEmail);
 }
 
-export async function insertIngreso(ingreso: Omit<Ingreso, 'id'>): Promise<Ingreso> {
+export async function insertIngreso(
+  ingreso: Omit<Ingreso, 'id'>,
+  userEmail?: string | null
+): Promise<Ingreso> {
   if (supabase) {
     const { data, error } = await supabase
       .from('ingresos')
@@ -201,20 +269,40 @@ export async function insertIngreso(ingreso: Omit<Ingreso, 'id'>): Promise<Ingre
       .single();
     if (!error && data) return data as Ingreso;
   }
-  return localStore.addIngreso(ingreso);
+  return localStore.addIngreso(ingreso, userEmail);
 }
 
-export async function removeIngreso(id: string): Promise<boolean> {
+export async function removeIngreso(id: string, userEmail?: string | null): Promise<boolean> {
   if (supabase) {
     const { error } = await supabase.from('ingresos').delete().eq('id', id);
     return !error;
   }
-  return localStore.deleteIngreso(id);
+  return localStore.deleteIngreso(id, userEmail);
+}
+
+export async function updateIngreso(
+  id: string,
+  updates: Partial<Ingreso>,
+  userEmail?: string | null
+): Promise<Ingreso | null> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('ingresos')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error && data) return data as Ingreso;
+
+    return null;
+  }
+  return localStore.updateIngreso(id, updates, userEmail);
 }
 
 export async function updateExpense(
   id: string,
-  updates: Partial<Expense>
+  updates: Partial<Expense>,
+  userEmail?: string | null
 ): Promise<Expense | null> {
   if (supabase) {
     const { data, error } = await supabase
@@ -240,5 +328,5 @@ export async function updateExpense(
 
     return null;
   }
-  return localStore.updateExpense(id, updates);
+  return localStore.updateExpense(id, updates, userEmail);
 }

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import { Expense } from '@/types/expense';
 
 interface Message {
   id: string;
@@ -10,7 +11,12 @@ interface Message {
   text: string;
 }
 
-export function ChatQuery() {
+interface ChatQueryProps {
+  expenses?: Expense[];
+  userEmail?: string;
+}
+
+export function ChatQuery({ expenses = [], userEmail }: ChatQueryProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -53,8 +59,11 @@ export function ChatQuery() {
     try {
       const res = await fetch('/api/consulta', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pregunta: textToSend })
+        headers: {
+          'Content-Type': 'application/json',
+          ...(userEmail ? { 'x-pockit-user-email': userEmail } : {})
+        },
+        body: JSON.stringify({ pregunta: textToSend, expensesSnapshot: expenses })
       });
 
       if (!res.ok || !res.body) {

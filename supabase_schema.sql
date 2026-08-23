@@ -1,4 +1,4 @@
--- Tabla gastos para Aleph (QVAC Hackathon 2026)
+-- Tabla gastos para Pockit (QVAC Hackathon 2026)
 -- Ejecutar este script en el Editor SQL de Supabase (https://app.supabase.com)
 
 CREATE TABLE IF NOT EXISTS public.gastos (
@@ -32,7 +32,7 @@ CREATE POLICY "Permitir insercion publica" ON public.gastos
 CREATE POLICY "Permitir eliminacion publica" ON public.gastos
   FOR DELETE USING (true);
 
--- Tabla ingresos para Aleph (QVAC Hackathon 2026)
+-- Tabla ingresos para Pockit (QVAC Hackathon 2026)
 CREATE TABLE IF NOT EXISTS public.ingresos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   monto NUMERIC NOT NULL,

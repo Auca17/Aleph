@@ -27,21 +27,21 @@ All AI inference runs **locally on the user's device** via `@qvac/sdk`. Zero clo
 As required by the track guidelines, here are the exact entrypoints where QVAC inference executes:
 
 1. **OCR Pipeline (`OCR_LATIN`)**:  
-   👉 [`src/lib/qvac/ocr-pipeline.ts`](src/lib/qvac/ocr-pipeline.ts#L40-L55) · [GitHub Link](https://github.com/Auca17/Aleph/blob/main/src/lib/qvac/ocr-pipeline.ts#L40-L55)  
+   👉 [`src/lib/qvac/ocr-pipeline.ts`](src/lib/qvac/ocr-pipeline.ts#L40-L55) · [GitHub Link](https://github.com/Auca17/Pockit/blob/main/src/lib/qvac/ocr-pipeline.ts#L40-L55)  
    *Uses `loadModel` with `OCR_LATIN` and `ocr()` to extract text from receipt images locally.*
 
 2. **Transcription Pipeline (`WHISPER_TINY`)**:  
-   👉 [`src/lib/qvac/transcription-pipeline.ts`](src/lib/qvac/transcription-pipeline.ts#L43-L57) · [GitHub Link](https://github.com/Auca17/Aleph/blob/main/src/lib/qvac/transcription-pipeline.ts#L43-L57)  
+   👉 [`src/lib/qvac/transcription-pipeline.ts`](src/lib/qvac/transcription-pipeline.ts#L43-L57) · [GitHub Link](https://github.com/Auca17/Pockit/blob/main/src/lib/qvac/transcription-pipeline.ts#L43-L57)  
    *Uses `loadModel` with `WHISPER_TINY` and `transcribe()` for Spanish voice note transcription.*
 
 3. **LLM Categorization & Natural Language Chat (`LLAMA_3_2_1B_INST_Q4_0`)**:  
-   👉 [`src/lib/qvac/llm-pipeline.ts`](src/lib/qvac/llm-pipeline.ts#L83-L133) · [GitHub Link](https://github.com/Auca17/Aleph/blob/main/src/lib/qvac/llm-pipeline.ts#L83-L133)  
+   👉 [`src/lib/qvac/llm-pipeline.ts`](src/lib/qvac/llm-pipeline.ts#L83-L133) · [GitHub Link](https://github.com/Auca17/Pockit/blob/main/src/lib/qvac/llm-pipeline.ts#L83-L133)  
    *Uses `loadModel` + `completion()` with delimited tag parsing `[[TAG]]..[[/TAG]]` for structured categorization.*  
-   👉 Chat streaming: [`src/lib/qvac/llm-pipeline.ts`](src/lib/qvac/llm-pipeline.ts#L138-L174) · [GitHub Link](https://github.com/Auca17/Aleph/blob/main/src/lib/qvac/llm-pipeline.ts#L138-L174)  
+   👉 Chat streaming: [`src/lib/qvac/llm-pipeline.ts`](src/lib/qvac/llm-pipeline.ts#L138-L174) · [GitHub Link](https://github.com/Auca17/Pockit/blob/main/src/lib/qvac/llm-pipeline.ts#L138-L174)  
    *Streaming token generator using `completion({ stream: true })` for real-time SSE responses.*
 
 4. **Deterministic Anomaly Detection** (no LLM — code only):  
-   👉 [`src/lib/anomaly.ts`](src/lib/anomaly.ts#L8-L49) · [GitHub Link](https://github.com/Auca17/Aleph/blob/main/src/lib/anomaly.ts#L8-L49)  
+   👉 [`src/lib/anomaly.ts`](src/lib/anomaly.ts#L8-L49) · [GitHub Link](https://github.com/Auca17/Pockit/blob/main/src/lib/anomaly.ts#L8-L49)  
    *Calculates statistical outliers (> 2× category average, baseline ≥ 3 records) in code, avoiding LLM hallucinations.*
 
 ---
@@ -67,8 +67,8 @@ The demo shows the complete pipeline running **100% locally** with no internet f
 
 ### 1. Clone repository
 ```bash
-git clone https://github.com/Auca17/Aleph.git
-cd Aleph
+git clone https://github.com/Auca17/Pockit.git
+cd Pockit
 ```
 
 ### 2. Install dependencies
@@ -83,7 +83,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 Then execute the SQL schema in [`supabase_schema.sql`](supabase_schema.sql) in the Supabase SQL Editor.  
-**Without credentials, Aleph works automatically with a built-in in-memory fallback store — no setup required.**
+**Without credentials, Pockit works automatically with a built-in in-memory fallback store — no setup required.**
 
 ### 4. Run development server
 ```bash

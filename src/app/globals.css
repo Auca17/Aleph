@@ -103,3 +103,176 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-outline);
 }
+
+/* ── Expense palettes based on the Pockit brand board ── */
+.expense-capture-palette {
+  --expense-capture-accent: #4a9ed3;
+  --expense-capture-accent-dark: #006491;
+  --expense-capture-warm: #c98a2c;
+  --expense-capture-warm-dark: #845400;
+  --expense-capture-surface: #ffffff;
+  --expense-capture-field: #f6fbff;
+  --expense-capture-border: #9fcbe6;
+
+  background:
+    linear-gradient(135deg, rgba(74, 158, 211, 0.16), rgba(255, 221, 182, 0.30) 42%, rgba(255, 255, 255, 0.96) 72%),
+    var(--expense-capture-surface) !important;
+  border-color: rgba(74, 158, 211, 0.48) !important;
+  box-shadow:
+    0 18px 44px rgba(0, 100, 145, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86) !important;
+  color: var(--color-on-surface);
+}
+
+.expense-capture-palette h2,
+.expense-capture-palette label {
+  color: var(--color-on-surface) !important;
+}
+
+.expense-capture-palette p {
+  color: var(--color-on-surface-variant) !important;
+}
+
+.expense-capture-palette input:not([type="file"]),
+.expense-capture-palette select {
+  background: var(--expense-capture-field) !important;
+  border-color: var(--expense-capture-border) !important;
+  color: var(--color-on-surface) !important;
+}
+
+.expense-capture-palette input::placeholder {
+  color: var(--color-neutral) !important;
+}
+
+.expense-capture-palette input:focus,
+.expense-capture-palette select:focus {
+  border-color: var(--expense-capture-accent) !important;
+  box-shadow: 0 0 0 2px rgba(74, 158, 211, 0.22) !important;
+}
+
+.expense-capture-palette .text-indigo-500,
+.expense-capture-palette .text-indigo-600 {
+  color: var(--expense-capture-warm-dark) !important;
+}
+
+.expense-capture-palette .bg-indigo-50,
+.expense-capture-palette .bg-zinc-100 {
+  background: #e7f5ff !important;
+}
+
+.expense-capture-palette .bg-gradient-to-r,
+.expense-capture-palette .bg-indigo-600,
+.expense-capture-palette button[type="submit"] {
+  background: linear-gradient(90deg, var(--expense-capture-accent-dark), var(--expense-capture-accent) 52%, var(--expense-capture-warm)) !important;
+  color: var(--color-on-primary) !important;
+  box-shadow: 0 12px 28px rgba(0, 100, 145, 0.24) !important;
+}
+
+.expense-capture-palette .border-zinc-200,
+.expense-capture-palette .border-zinc-300 {
+  border-color: var(--expense-capture-border) !important;
+}
+
+.expense-capture-palette .bg-zinc-50\/50,
+.expense-capture-palette .bg-zinc-800\/30 {
+  background: rgba(246, 251, 255, 0.82) !important;
+}
+
+.expense-registry-palette {
+  --expense-registry-accent: #6b8f71;
+  --expense-registry-accent-dark: #44664b;
+  --expense-registry-tertiary: #4a9ed3;
+  --expense-registry-warm: #c98a2c;
+  --expense-registry-surface: #ffffff;
+  --expense-registry-field: #eef7f2;
+  --expense-registry-border: #91b196;
+
+  color: var(--color-on-surface);
+}
+
+.expense-registry-palette .registry-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(197, 236, 201, 0.42), rgba(234, 246, 255, 0.42) 48%, rgba(255, 253, 249, 0.96)),
+    var(--expense-registry-surface) !important;
+  border-color: rgba(68, 102, 75, 0.34) !important;
+  box-shadow:
+    0 14px 30px rgba(68, 102, 75, 0.16),
+    0 2px 8px rgba(74, 158, 211, 0.08) !important;
+}
+
+.expense-registry-palette .registry-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--expense-registry-accent-dark), var(--expense-registry-tertiary), var(--expense-registry-warm));
+}
+
+.expense-registry-palette .registry-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.expense-registry-palette .registry-card:hover {
+  border-color: var(--expense-registry-accent-dark) !important;
+  box-shadow:
+    0 18px 40px rgba(68, 102, 75, 0.22),
+    0 4px 14px rgba(74, 158, 211, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+.expense-registry-palette input,
+.expense-registry-palette select {
+  background: var(--expense-registry-field) !important;
+  border-color: var(--expense-registry-border) !important;
+  color: var(--color-on-surface) !important;
+}
+
+.expense-registry-palette input::placeholder {
+  color: var(--color-neutral) !important;
+}
+
+.expense-registry-palette input:focus,
+.expense-registry-palette select:focus {
+  border-color: var(--expense-registry-tertiary) !important;
+  box-shadow: 0 0 0 2px rgba(74, 158, 211, 0.24) !important;
+}
+
+.expense-registry-palette .text-indigo-500,
+.expense-registry-palette .text-indigo-600 {
+  color: var(--expense-registry-tertiary) !important;
+}
+
+.expense-registry-palette .text-zinc-900,
+.expense-registry-palette .text-zinc-800,
+.expense-registry-palette .text-zinc-700,
+.expense-registry-palette .dark\:text-zinc-50,
+.expense-registry-palette .dark\:text-zinc-100,
+.expense-registry-palette .dark\:text-zinc-200 {
+  color: var(--color-on-surface) !important;
+}
+
+.expense-registry-palette .text-zinc-500,
+.expense-registry-palette .text-zinc-400,
+.expense-registry-palette .dark\:text-zinc-400 {
+  color: var(--color-neutral) !important;
+}
+
+.expense-registry-palette .bg-zinc-50,
+.expense-registry-palette .bg-zinc-800 {
+  background: var(--expense-registry-field) !important;
+}
+
+.expense-registry-palette .h-3.w-full {
+  height: 0.9rem !important;
+  background: rgba(68, 102, 75, 0.14) !important;
+  box-shadow: inset 0 0 0 1px rgba(68, 102, 75, 0.10);
+}
+
+.expense-registry-palette .border-zinc-200,
+.expense-registry-palette .border-zinc-700,
+.expense-registry-palette .border-zinc-800 {
+  border-color: var(--expense-registry-border) !important;
+}
