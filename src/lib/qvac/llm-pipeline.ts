@@ -1,6 +1,7 @@
 import '@/lib/qvac/env';
 import { loadModel, completion, LLAMA_3_2_1B_INST_Q4_0 } from '@qvac/sdk';
 import { ParsedExpense, Expense, ExpenseSource } from '@/types/expense';
+import { Ingreso } from '@/types/ingreso';
 
 let llmModelId: string | null = null;
 let isLoading = false;
@@ -426,12 +427,53 @@ function getCurrentWeekRange(): { start: Date; end: Date } {
   return { start, end };
 }
 
-function isCurrentWeekExpense(expense: Expense): boolean {
-  const expenseDate = new Date(expense.fecha);
-  if (Number.isNaN(expenseDate.getTime())) return false;
+function getCurrentMonthRange(): { start: Date; end: Date } {
+  const start = new Date();
+  start.setDate(1);
+  start.setHours(0, 0, 0, 0);
 
-  const { start, end } = getCurrentWeekRange();
-  return expenseDate >= start && expenseDate < end;
+  const end = new Date(start);
+  end.setMonth(start.getMonth() + 1);
+
+  return { start, end };
+}
+
+function isDateInRange(dateValue: string, range: { start: Date; end: Date }): boolean {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+
+  return date >= range.start && date < range.end;
+}
+
+function getScopedRecords<T extends { fecha: string }>(
+  records: T[],
+  normalizedQuery: string
+): { records: T[]; label: string } {
+  if (normalizedQuery.includes('semana')) {
+    return {
+      records: records.filter((record) => isDateInRange(record.fecha, getCurrentWeekRange())),
+      label: 'esta semana'
+    };
+  }
+
+  if (normalizedQuery.includes('mes')) {
+    return {
+      records: records.filter((record) => isDateInRange(record.fecha, getCurrentMonthRange())),
+      label: 'este mes'
+    };
+  }
+
+  return { records, label: 'en los registros cargados' };
+}
+
+function getRecordDateLabel(dateValue: string): string {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'sin fecha';
+
+  return date.toLocaleDateString('es-AR', {
+    day: '2-digit',
+    month: 'short'
+  });
 }
 
 function expenseNeedsReview(expense: Expense): boolean {
@@ -443,6 +485,11 @@ function getExpenseAmount(expense: Expense): number {
   return Number.isFinite(amount) ? amount : 0;
 }
 
+function getIncomeAmount(income: Ingreso): number {
+  const amount = Number(income.monto || 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 function containsAny(text: string, terms: string[]): boolean {
   return terms.some((term) => text.includes(term));
 }
@@ -451,25 +498,103 @@ function pluralize(count: number, singular: string, plural: string): string {
   return count === 1 ? singular : plural;
 }
 
-function buildScopeLabel(isWeekQuery: boolean): string {
-  return isWeekQuery ? 'esta semana' : 'en los registros cargados';
-}
-
 function buildExpenseRows(expenses: Expense[]): string {
   if (expenses.length === 0) return '- Sin registros.';
 
   return expenses
     .map((expense) => {
       const label = expense.descripcion || expense.categoria || 'Gasto';
-      const date = expense.fecha
-        ? new Date(expense.fecha).toLocaleDateString('es-AR', {
-            day: '2-digit',
-            month: 'short'
-          })
-        : 'sin fecha';
+      const date = getRecordDateLabel(expense.fecha);
       return `- ${label}: ${formatCurrency(getExpenseAmount(expense))} (${expense.categoria}, ${date})`;
     })
     .join('\n');
+}
+
+function buildIncomeRows(incomes: Ingreso[]): string {
+  if (incomes.length === 0) return '- Sin registros.';
+
+  return incomes
+    .map((income) => {
+      const label = income.descripcion || income.categoria || 'Ingreso';
+      const date = getRecordDateLabel(income.fecha);
+      return `- ${label}: ${formatCurrency(getIncomeAmount(income))} (${income.categoria}, ${date})`;
+    })
+    .join('\n');
+}
+
+function getSearchTerms(normalizedQuery: string): string[] {
+  const stopWords = new Set([
+    'a',
+    'al',
+    'algo',
+    'con',
+    'cual',
+    'cuales',
+    'cuanto',
+    'cuantos',
+    'de',
+    'del',
+    'el',
+    'en',
+    'esta',
+    'este',
+    'fue',
+    'gaste',
+    'gasto',
+    'gastos',
+    'hice',
+    'ingrese',
+    'ingreso',
+    'ingresos',
+    'la',
+    'las',
+    'lo',
+    'los',
+    'mas',
+    'me',
+    'mi',
+    'mis',
+    'por',
+    'que',
+    'semana',
+    'son',
+    'tenes',
+    'tengo',
+    'total',
+    'traeme',
+    'un',
+    'una'
+  ]);
+
+  return normalizedQuery
+    .replace(/[¿?¡!.,:;()]/g, ' ')
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter((term) => term.length > 2)
+    .filter((term) => !/^\d/.test(term))
+    .filter((term) => !stopWords.has(term));
+}
+
+function findMatchingExpenses(normalizedQuery: string, expenses: Expense[]): Expense[] {
+  const terms = getSearchTerms(normalizedQuery);
+  if (terms.length === 0) return [];
+
+  return expenses.filter((expense) => {
+    const haystack = normalizeQueryText(
+      `${expense.descripcion || ''} ${expense.categoria || ''} ${expense.raw_text || ''}`
+    );
+    return terms.some((term) => haystack.includes(term));
+  });
+}
+
+function findMatchingIncomes(normalizedQuery: string, incomes: Ingreso[]): Ingreso[] {
+  const terms = getSearchTerms(normalizedQuery);
+  if (terms.length === 0) return [];
+
+  return incomes.filter((income) => {
+    const haystack = normalizeQueryText(`${income.descripcion || ''} ${income.categoria || ''}`);
+    return terms.some((term) => haystack.includes(term));
+  });
 }
 
 function buildCategorySummary(expenses: Expense[]): string {
@@ -491,6 +616,27 @@ function getCategoryTotals(expenses: Expense[]): Array<[string, number]> {
 
   return Object.entries(totals)
     .sort(([, totalA], [, totalB]) => totalB - totalA);
+}
+
+function getIncomeCategoryTotals(incomes: Ingreso[]): Array<[string, number]> {
+  const totals = incomes.reduce<Record<string, number>>((acc, income) => {
+    const category = income.categoria || 'Otros';
+    acc[category] = (acc[category] || 0) + getIncomeAmount(income);
+    return acc;
+  }, {});
+
+  return Object.entries(totals)
+    .sort(([, totalA], [, totalB]) => totalB - totalA);
+}
+
+function buildIncomeCategorySummary(incomes: Ingreso[]): string {
+  const sortedTotals = getIncomeCategoryTotals(incomes);
+
+  if (sortedTotals.length === 0) return '- Sin categorías registradas.';
+
+  return sortedTotals
+    .map(([category, total]) => `- ${category}: ${formatCurrency(total)}`)
+    .join('\n');
 }
 
 function buildRecentRows(expenses: Expense[]): string {
@@ -528,6 +674,7 @@ function getRequestedCategory(normalizedQuery: string, expenses: Expense[]): str
 
 function isLargestExpensesQuery(normalizedQuery: string): boolean {
   return containsAny(normalizedQuery, [
+    'lo mas caro',
     'mas grande',
     'mas grandes',
     'mayor',
@@ -536,21 +683,190 @@ function isLargestExpensesQuery(normalizedQuery: string): boolean {
     'gastos caros',
     'mas caro',
     'mas caros',
+    'pague',
+    'pago mas alto',
     'top',
     'ranking'
   ]);
 }
 
+function isIncomeQuery(normalizedQuery: string): boolean {
+  return containsAny(normalizedQuery, [
+    'ingreso',
+    'ingresos',
+    'ingrese',
+    'ingresaste',
+    'entro',
+    'entraron',
+    'entro plata',
+    'plata que entro',
+    'cobre',
+    'cobro',
+    'cobros',
+    'cobranza',
+    'cobranzas',
+    'entrada',
+    'entradas',
+    'honorario',
+    'honorarios',
+    'freelance',
+    'ventas',
+    'inversiones',
+    'sueldo'
+  ]);
+}
+
+function isBalanceQuery(normalizedQuery: string): boolean {
+  return containsAny(normalizedQuery, [
+    'balance',
+    'saldo',
+    'me queda',
+    'queda',
+    'resta',
+    'diferencia',
+    'resultado',
+    'situacion'
+  ]);
+}
+
+function isAverageQuery(normalizedQuery: string): boolean {
+  return containsAny(normalizedQuery, ['promedio', 'media', 'gasto promedio', 'ingreso promedio']);
+}
+
 function isTopCategoryQuery(normalizedQuery: string): boolean {
-  return normalizedQuery.includes('categoria') && containsAny(normalizedQuery, [
+  return containsAny(normalizedQuery, ['categoria', 'se me fue', 'comiendo', 'fue mas plata']) && containsAny(normalizedQuery, [
     'mas gaste',
     'mas gasto',
     'mas se gasto',
+    'mas plata',
     'mayor gasto',
     'mayor total',
+    'se me fue',
+    'comiendo',
     'principal',
     'top'
   ]);
+}
+
+function isTopIncomeCategoryQuery(normalizedQuery: string): boolean {
+  return containsAny(normalizedQuery, ['categoria', 'plata', 'ingreso', 'ingresos', 'entro']) && containsAny(normalizedQuery, [
+    'mayor parte',
+    'mas ingresos',
+    'mas ingreso',
+    'mayor ingreso',
+    'mayor total',
+    'principal',
+    'viene',
+    'vienen',
+    'proviene',
+    'provienen'
+  ]);
+}
+
+function isCombinedTopCategoryQuery(normalizedQuery: string): boolean {
+  return containsAny(normalizedQuery, ['gaste', 'gasto', 'gastos']) &&
+    isIncomeQuery(normalizedQuery) &&
+    containsAny(normalizedQuery, ['categoria', 'mas', 'mayor parte', 'mayor']);
+}
+
+function buildCombinedTopCategoryAnswer(
+  expenses: Expense[],
+  incomes: Ingreso[],
+  normalizedQuery: string
+): string {
+  const scopedExpenses = getScopedRecords(expenses, normalizedQuery);
+  const scopedIncomes = getScopedRecords(incomes, normalizedQuery);
+  const totalExpenses = scopedExpenses.records.reduce((acc, expense) => acc + getExpenseAmount(expense), 0);
+  const totalIncomes = scopedIncomes.records.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+  const [topExpenseCategory] = getCategoryTotals(scopedExpenses.records);
+  const [topIncomeCategory] = getIncomeCategoryTotals(scopedIncomes.records);
+  const label = scopedExpenses.label === scopedIncomes.label ? scopedExpenses.label : 'en los registros cargados';
+
+  if (!topExpenseCategory && !topIncomeCategory) {
+    return `No hay gastos ni ingresos registrados ${label}.`;
+  }
+
+  const expenseText = topExpenseCategory
+    ? `Gastos: la categoría donde más gastaste fue ${topExpenseCategory[0]}, con ${formatCurrency(topExpenseCategory[1])}${totalExpenses > 0 ? ` (${Math.round((topExpenseCategory[1] / totalExpenses) * 100)}% del total de gastos)` : ''}.`
+    : 'Gastos: no hay gastos registrados.';
+
+  const incomeText = topIncomeCategory
+    ? `Ingresos: la categoría que más aportó fue ${topIncomeCategory[0]}, con ${formatCurrency(topIncomeCategory[1])}${totalIncomes > 0 ? ` (${Math.round((topIncomeCategory[1] / totalIncomes) * 100)}% del total de ingresos)` : ''}.`
+    : 'Ingresos: no hay ingresos registrados.';
+
+  return `${expenseText}\n\n${incomeText}`;
+}
+
+function isDateQuery(normalizedQuery: string): boolean {
+  return /\b\d{1,2}\b/.test(normalizedQuery) && containsAny(normalizedQuery, [
+    'ene',
+    'enero',
+    'feb',
+    'febrero',
+    'mar',
+    'marzo',
+    'abr',
+    'abril',
+    'may',
+    'mayo',
+    'jun',
+    'junio',
+    'jul',
+    'julio',
+    'ago',
+    'agosto',
+    'sep',
+    'septiembre',
+    'oct',
+    'octubre',
+    'nov',
+    'noviembre',
+    'dic',
+    'diciembre'
+  ]);
+}
+
+function getRequestedDate(normalizedQuery: string): { day: number; month: number } | null {
+  const months: Record<string, number> = {
+    ene: 0,
+    enero: 0,
+    feb: 1,
+    febrero: 1,
+    mar: 2,
+    marzo: 2,
+    abr: 3,
+    abril: 3,
+    may: 4,
+    mayo: 4,
+    jun: 5,
+    junio: 5,
+    jul: 6,
+    julio: 6,
+    ago: 7,
+    agosto: 7,
+    sep: 8,
+    septiembre: 8,
+    oct: 9,
+    octubre: 9,
+    nov: 10,
+    noviembre: 10,
+    dic: 11,
+    diciembre: 11
+  };
+  const dayMatch = normalizedQuery.match(/\b([0-2]?\d|3[0-1])\b/);
+  if (!dayMatch) return null;
+
+  const monthEntry = Object.entries(months).find(([month]) => normalizedQuery.includes(month));
+  if (!monthEntry) return null;
+
+  return { day: Number(dayMatch[1]), month: monthEntry[1] };
+}
+
+function isSameRequestedDate(dateValue: string, requestedDate: { day: number; month: number }): boolean {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+
+  return date.getDate() === requestedDate.day && date.getMonth() === requestedDate.month;
 }
 
 function getRequestedExpenseLimit(normalizedQuery: string, fallback: number): number {
@@ -579,8 +895,38 @@ function getRequestedExpenseLimit(normalizedQuery: string, fallback: number): nu
   return wordMatch ? wordMatch[1] : fallback;
 }
 
+function getLargestQueryFallbackLimit(normalizedQuery: string): number {
+  return containsAny(normalizedQuery, [
+    'lo mas caro',
+    'el mas caro',
+    'la mas cara',
+    'que fue',
+    'cual fue',
+    'mayor gasto',
+    'mayor ingreso'
+  ])
+    ? 1
+    : 5;
+}
+
 function isReviewQuery(normalizedQuery: string): boolean {
   return containsAny(normalizedQuery, ['corregir', 'revision', 'revisar', 'pendiente', 'pendientes']);
+}
+
+function isAnomalyQuery(normalizedQuery: string): boolean {
+  return containsAny(normalizedQuery, [
+    'anomalia',
+    'anomalias',
+    'raro',
+    'raros',
+    'extrano',
+    'extranos',
+    'sospechoso',
+    'sospechosos',
+    'inusual',
+    'inusuales',
+    'fuera de lo normal'
+  ]);
 }
 
 function parseAmountFromQuery(normalizedQuery: string): number | null {
@@ -613,15 +959,40 @@ function getAmountFilter(normalizedQuery: string): { operator: 'under' | 'over';
 
 function shouldAnswerWithExactSummary(normalizedQuery: string): boolean {
   return [
+    'balance',
+    'saldo',
+    'queda',
     'gaste',
     'gasto',
     'gastos',
+    'pague',
+    'pagar',
+    'plata',
+    'se me fue',
+    'comiendo',
+    'ingrese',
+    'ingreso',
+    'ingresos',
+    'entro',
+    'entraron',
+    'cobre',
+    'cobro',
+    'entrada',
+    'entradas',
+    'promedio',
     'total',
     'semana',
+    'mes',
     'categoria',
     'categorias',
     'anomalia',
     'anomalias',
+    'raro',
+    'raros',
+    'extrano',
+    'extranos',
+    'sospechoso',
+    'inusual',
     'corregir',
     'revision',
     'menor',
@@ -629,22 +1000,126 @@ function shouldAnswerWithExactSummary(normalizedQuery: string): boolean {
     'mayor',
     'mayores',
     'menos de',
-    'mas de'
+    'mas de',
+    'sube',
+    'internet',
+    'freelance',
+    'honorarios',
+    'ventas',
+    'inversiones'
   ].some((term) => normalizedQuery.includes(term));
+}
+
+function buildBalanceAnswer(
+  expenses: Expense[],
+  incomes: Ingreso[],
+  normalizedQuery: string
+): string {
+  const scopedExpenses = getScopedRecords(expenses, normalizedQuery);
+  const scopedIncomes = getScopedRecords(incomes, normalizedQuery);
+  const totalExpenses = scopedExpenses.records.reduce((acc, expense) => acc + getExpenseAmount(expense), 0);
+  const totalIncomes = scopedIncomes.records.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+  const balance = totalIncomes - totalExpenses;
+  const label = scopedExpenses.label === scopedIncomes.label ? scopedExpenses.label : 'en los registros cargados';
+
+  return `Tu balance ${label} es ${formatCurrency(balance)}.\n\nIngresos: ${formatCurrency(totalIncomes)} (${scopedIncomes.records.length} ${pluralize(scopedIncomes.records.length, 'registro', 'registros')})\nGastos: ${formatCurrency(totalExpenses)} (${scopedExpenses.records.length} ${pluralize(scopedExpenses.records.length, 'registro', 'registros')})`;
+}
+
+function buildExactIncomeAnswer(userQuery: string, incomes: Ingreso[]): string {
+  const normalizedQuery = normalizeQueryText(userQuery);
+  const { records: scopedIncomes, label: scopeLabel } = getScopedRecords(incomes, normalizedQuery);
+  const total = scopedIncomes.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+  const amountFilter = getAmountFilter(normalizedQuery);
+  const matchingIncomes = findMatchingIncomes(normalizedQuery, scopedIncomes);
+  const requestedDate = isDateQuery(normalizedQuery) ? getRequestedDate(normalizedQuery) : null;
+
+  if (scopedIncomes.length === 0) {
+    return `No hay ingresos registrados ${scopeLabel}.`;
+  }
+
+  if (requestedDate) {
+    const dateIncomes = scopedIncomes.filter((income) =>
+      isSameRequestedDate(income.fecha, requestedDate)
+    );
+    const dateTotal = dateIncomes.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+
+    if (dateIncomes.length === 0) {
+      return `No encontré ingresos para esa fecha ${scopeLabel}.`;
+    }
+
+    return `Para esa fecha encontré ${dateIncomes.length} ${pluralize(dateIncomes.length, 'ingreso', 'ingresos')}, por un total de ${formatCurrency(dateTotal)}:\n\n${buildIncomeRows(dateIncomes)}`;
+  }
+
+  if (matchingIncomes.length > 0) {
+    const matchingTotal = matchingIncomes.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+    return `Encontré ${matchingIncomes.length} ${pluralize(matchingIncomes.length, 'ingreso relacionado', 'ingresos relacionados')} ${scopeLabel}, por un total de ${formatCurrency(matchingTotal)}:\n\n${buildIncomeRows(matchingIncomes)}`;
+  }
+
+  if (isTopIncomeCategoryQuery(normalizedQuery)) {
+    const [topCategory] = getIncomeCategoryTotals(scopedIncomes);
+    if (!topCategory) {
+      return `No hay categorías con ingresos registrados ${scopeLabel}.`;
+    }
+
+    const [category, categoryTotal] = topCategory;
+    const percentage = total > 0 ? Math.round((categoryTotal / total) * 100) : 0;
+    const categoryIncomes = scopedIncomes.filter(
+      (income) => normalizeQueryText(income.categoria) === normalizeQueryText(category)
+    );
+
+    return `La mayor parte de tus ingresos ${scopeLabel} viene de ${category}: ${formatCurrency(categoryTotal)} (${percentage}% del total).\n\nRegistros de esa categoría:\n${buildIncomeRows(categoryIncomes)}`;
+  }
+
+  if (amountFilter) {
+    const filteredIncomes = scopedIncomes
+      .filter((income) =>
+        amountFilter.operator === 'under'
+          ? getIncomeAmount(income) < amountFilter.amount
+          : getIncomeAmount(income) > amountFilter.amount
+      )
+      .sort((incomeA, incomeB) => getIncomeAmount(incomeB) - getIncomeAmount(incomeA));
+    const filteredTotal = filteredIncomes.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+    const comparisonLabel = amountFilter.operator === 'under' ? 'menores a' : 'mayores a';
+
+    if (filteredIncomes.length === 0) {
+      return `No encontré ingresos ${comparisonLabel} ${formatCurrency(amountFilter.amount)} ${scopeLabel}.`;
+    }
+
+    return `Encontré ${filteredIncomes.length} ${pluralize(filteredIncomes.length, 'ingreso', 'ingresos')} ${comparisonLabel} ${formatCurrency(amountFilter.amount)} ${scopeLabel}, por un total de ${formatCurrency(filteredTotal)}:\n\n${buildIncomeRows(filteredIncomes)}`;
+  }
+
+  if (isLargestExpensesQuery(normalizedQuery)) {
+    const requestedLimit = getRequestedExpenseLimit(
+      normalizedQuery,
+      getLargestQueryFallbackLimit(normalizedQuery)
+    );
+    const topIncomes = [...scopedIncomes]
+      .sort((incomeA, incomeB) => getIncomeAmount(incomeB) - getIncomeAmount(incomeA))
+      .slice(0, Math.min(requestedLimit, scopedIncomes.length));
+
+    return `Tus ${topIncomes.length} ${pluralize(topIncomes.length, 'ingreso más grande', 'ingresos más grandes')} ${scopeLabel} son:\n\n${buildIncomeRows(topIncomes)}\n\nTotal de ingresos analizado: ${formatCurrency(total)}.`;
+  }
+
+  if (isAverageQuery(normalizedQuery)) {
+    const average = scopedIncomes.length > 0 ? total / scopedIncomes.length : 0;
+    return `Tu ingreso promedio ${scopeLabel} es ${formatCurrency(average)}, calculado sobre ${scopedIncomes.length} ${pluralize(scopedIncomes.length, 'registro', 'registros')}.`;
+  }
+
+  return `Según los ${scopedIncomes.length} registros visibles, ingresaste ${formatCurrency(total)} ${scopeLabel}.\n\nPor categoría:\n${buildIncomeCategorySummary(scopedIncomes)}`;
 }
 
 function buildExactExpenseAnswer(userQuery: string, expenses: Expense[]): string {
   const normalizedQuery = normalizeQueryText(userQuery);
-  const isWeekQuery = normalizedQuery.includes('semana');
-  const scopedExpenses = isWeekQuery ? expenses.filter(isCurrentWeekExpense) : expenses;
-  const scopeLabel = buildScopeLabel(isWeekQuery);
+  const { records: scopedExpenses, label: scopeLabel } = getScopedRecords(expenses, normalizedQuery);
   const total = scopedExpenses.reduce((acc, expense) => acc + getExpenseAmount(expense), 0);
   const anomalies = scopedExpenses.filter((expense) => expense.flag_anomalia);
   const pendingReview = scopedExpenses.filter(expenseNeedsReview);
   const requestedCategory = getRequestedCategory(normalizedQuery, scopedExpenses);
   const amountFilter = getAmountFilter(normalizedQuery);
+  const requestedDate = isDateQuery(normalizedQuery) ? getRequestedDate(normalizedQuery) : null;
+  const matchingExpenses = findMatchingExpenses(normalizedQuery, scopedExpenses);
 
-  if (normalizedQuery.includes('anomalia')) {
+  if (isAnomalyQuery(normalizedQuery)) {
     if (anomalies.length === 0) {
       return `No hay anomalías detectadas ${scopeLabel}. Revisé ${scopedExpenses.length} ${pluralize(scopedExpenses.length, 'registro', 'registros')} por un total de ${formatCurrency(total)}.`;
     }
@@ -656,6 +1131,24 @@ function buildExactExpenseAnswer(userQuery: string, expenses: Expense[]): string
 
   if (scopedExpenses.length === 0) {
     return `No hay gastos registrados ${scopeLabel}.`;
+  }
+
+  if (requestedDate) {
+    const dateExpenses = scopedExpenses.filter((expense) =>
+      isSameRequestedDate(expense.fecha, requestedDate)
+    );
+    const dateTotal = dateExpenses.reduce((acc, expense) => acc + getExpenseAmount(expense), 0);
+
+    if (dateExpenses.length === 0) {
+      return `No encontré gastos para esa fecha ${scopeLabel}.`;
+    }
+
+    return `Para esa fecha encontré ${dateExpenses.length} ${pluralize(dateExpenses.length, 'gasto', 'gastos')}, por un total de ${formatCurrency(dateTotal)}:\n\n${buildExpenseRows(dateExpenses)}`;
+  }
+
+  if (matchingExpenses.length > 0 && matchingExpenses.length < scopedExpenses.length) {
+    const matchingTotal = matchingExpenses.reduce((acc, expense) => acc + getExpenseAmount(expense), 0);
+    return `Encontré ${matchingExpenses.length} ${pluralize(matchingExpenses.length, 'gasto relacionado', 'gastos relacionados')} ${scopeLabel}, por un total de ${formatCurrency(matchingTotal)}:\n\n${buildExpenseRows(matchingExpenses)}`;
   }
 
   if (amountFilter) {
@@ -677,7 +1170,10 @@ function buildExactExpenseAnswer(userQuery: string, expenses: Expense[]): string
   }
 
   if (isLargestExpensesQuery(normalizedQuery)) {
-    const requestedLimit = getRequestedExpenseLimit(normalizedQuery, 5);
+    const requestedLimit = getRequestedExpenseLimit(
+      normalizedQuery,
+      getLargestQueryFallbackLimit(normalizedQuery)
+    );
     const topExpenses = [...scopedExpenses]
       .sort((expenseA, expenseB) => getExpenseAmount(expenseB) - getExpenseAmount(expenseA))
       .slice(0, Math.min(requestedLimit, scopedExpenses.length));
@@ -718,6 +1214,11 @@ function buildExactExpenseAnswer(userQuery: string, expenses: Expense[]): string
     return `En ${requestedCategory} tenés ${categoryExpenses.length} ${pluralize(categoryExpenses.length, 'gasto', 'gastos')} ${scopeLabel}, por un total de ${formatCurrency(categoryTotal)}:\n\n${buildExpenseRows(categoryExpenses)}`;
   }
 
+  if (isAverageQuery(normalizedQuery)) {
+    const average = scopedExpenses.length > 0 ? total / scopedExpenses.length : 0;
+    return `Tu gasto promedio ${scopeLabel} es ${formatCurrency(average)}, calculado sobre ${scopedExpenses.length} ${pluralize(scopedExpenses.length, 'registro', 'registros')}.`;
+  }
+
   const reviewText = pendingReview.length > 0
     ? `\n\nAdemás, hay ${pendingReview.length} registro${pendingReview.length === 1 ? '' : 's'} por revisar.`
     : '';
@@ -727,33 +1228,61 @@ function buildExactExpenseAnswer(userQuery: string, expenses: Expense[]): string
 
 export async function* answerExpenseQuery(
   userQuery: string,
-  expenses: Expense[]
+  expenses: Expense[],
+  incomes: Ingreso[] = []
 ): AsyncGenerator<string, void, unknown> {
   const normalizedQuery = normalizeQueryText(userQuery);
 
   if (shouldAnswerWithExactSummary(normalizedQuery)) {
+    if (isBalanceQuery(normalizedQuery)) {
+      yield buildBalanceAnswer(expenses, incomes, normalizedQuery);
+      return;
+    }
+
+    if (isCombinedTopCategoryQuery(normalizedQuery)) {
+      yield buildCombinedTopCategoryAnswer(expenses, incomes, normalizedQuery);
+      return;
+    }
+
+    if (isIncomeQuery(normalizedQuery)) {
+      yield buildExactIncomeAnswer(userQuery, incomes);
+      return;
+    }
+
     yield buildExactExpenseAnswer(userQuery, expenses);
     return;
   }
 
   const modelId = await getLlmModel();
   const total = expenses.reduce((acc, expense) => acc + Number(expense.monto || 0), 0);
+  const totalIncomes = incomes.reduce((acc, income) => acc + getIncomeAmount(income), 0);
+  const balance = totalIncomes - total;
 
   const history = [
     {
       role: 'user' as const,
-      content: `Analiza estos registros de gastos y responde en español de forma breve.
-Usa solo los datos provistos. No inventes montos ni categorías. Si necesitás mencionar totales, usa los totales ya calculados.
+      content: `Analiza estos registros financieros y responde en español de forma breve.
+Usa solo los datos provistos. No inventes montos, categorías ni fechas. Si necesitás mencionar totales, usa los totales ya calculados.
 
 TOTAL_GASTOS_EXACTO: ${formatCurrency(total)}
-TOTAL_REGISTROS: ${expenses.length}
+TOTAL_INGRESOS_EXACTO: ${formatCurrency(totalIncomes)}
+BALANCE_EXACTO: ${formatCurrency(balance)}
+TOTAL_REGISTROS_GASTOS: ${expenses.length}
+TOTAL_REGISTROS_INGRESOS: ${incomes.length}
 
-TOTALES_POR_CATEGORIA:
+GASTOS_POR_CATEGORIA:
 ${buildCategorySummary(expenses)}
+
+INGRESOS_POR_CATEGORIA:
+${buildIncomeCategorySummary(incomes)}
 
 REGISTROS_RECIENTES:
 fecha | monto | categoria | descripcion
 ${buildRecentRows(expenses)}
+
+INGRESOS_RECIENTES:
+fecha | monto | categoria | descripcion
+${buildIncomeRows(incomes)}
 
 PREGUNTA: ${userQuery}
 
