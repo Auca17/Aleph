@@ -8,6 +8,105 @@ interface ExpenseCaptureProps {
   onExpenseAdded: (expense: Expense) => void;
 }
 
+interface PhotoConfidence {
+  level: 'alta' | 'media' | 'baja';
+  label: string;
+  reasons: string[];
+}
+
+interface PhotoAnalysis {
+  monto: number;
+  categoria: string;
+  fecha: string;
+  descripcion?: string;
+  rawText: string;
+}
+
+const TARGET_SAMPLE_RATE = 16000;
+const EXPENSE_CATEGORIES = [
+  'Alimentación',
+  'Transporte',
+  'Servicios',
+  'Salud',
+  'Entretenimiento',
+  'Indumentaria',
+  'Tecnología',
+  'Hogar',
+  'Otros'
+];
+
+function mergeAudioChunks(chunks: Float32Array[]): Float32Array {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const result = new Float32Array(totalLength);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return result;
+}
+
+function downsampleBuffer(buffer: Float32Array, sourceRate: number, targetRate: number): Float32Array {
+  if (targetRate === sourceRate) return buffer;
+
+  const ratio = sourceRate / targetRate;
+  const newLength = Math.round(buffer.length / ratio);
+  const result = new Float32Array(newLength);
+
+  for (let i = 0; i < newLength; i += 1) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(Math.floor((i + 1) * ratio), buffer.length);
+    let sum = 0;
+    let count = 0;
+
+    for (let j = start; j < end; j += 1) {
+      sum += buffer[j];
+      count += 1;
+    }
+
+    result[i] = count > 0 ? sum / count : 0;
+  }
+
+  return result;
+}
+
+function writeString(view: DataView, offset: number, value: string) {
+  for (let i = 0; i < value.length; i += 1) {
+    view.setUint8(offset + i, value.charCodeAt(i));
+  }
+}
+
+function encodeWav(samples: Float32Array, sampleRate: number): Blob {
+  const bytesPerSample = 2;
+  const blockAlign = bytesPerSample;
+  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+  const view = new DataView(buffer);
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * blockAlign, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 8 * bytesPerSample, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, samples.length * bytesPerSample, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i += 1, offset += 2) {
+    const sample = Math.max(-1, Math.min(1, Number.isFinite(samples[i]) ? samples[i] : 0));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
   const [tab, setTab] = useState<'foto' | 'voz' | 'manual'>('foto');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,14 +118,23 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<string | null>(null);
+  const [photoConfidence, setPhotoConfidence] = useState<PhotoConfidence | null>(null);
+  const [photoAnalysis, setPhotoAnalysis] = useState<PhotoAnalysis | null>(null);
+  const [photoTitle, setPhotoTitle] = useState('');
+  const [photoCategory, setPhotoCategory] = useState('Alimentación');
+  const [photoAmount, setPhotoAmount] = useState('');
 
   // Manual inputs
   const [manualMonto, setManualMonto] = useState('');
   const [manualCat, setManualCat] = useState('Alimentación');
   const [manualDesc, setManualDesc] = useState('');
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const audioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Float32Array[]>([]);
+  const audioSampleRateRef = useRef(TARGET_SAMPLE_RATE);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,75 +144,105 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       const url = URL.createObjectURL(file);
       setImagePreview(url);
       setError(null);
+      setSuccessInfo(null);
+      setPhotoConfidence(null);
+      setPhotoAnalysis(null);
+      setPhotoTitle('');
+      setPhotoAmount('');
     }
   };
 
   const startRecording = async () => {
     try {
       setError(null);
+      setAudioBlob(null);
+      setAudioUrl(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      let mimeType = 'audio/webm';
-      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
-        }
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+      if (!AudioContextConstructor) {
+        throw new Error('Este navegador no soporta Web Audio API');
       }
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      mediaRecorderRef.current = mediaRecorder;
+      const audioContext = new AudioContextConstructor();
+      const source = audioContext.createMediaStreamSource(stream);
+      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
       audioChunksRef.current = [];
+      audioSampleRateRef.current = audioContext.sampleRate;
+      audioContextRef.current = audioContext;
+      audioSourceRef.current = source;
+      audioProcessorRef.current = processor;
+      mediaStreamRef.current = stream;
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      processor.onaudioprocess = (event) => {
+        const channelData = event.inputBuffer.getChannelData(0);
+        audioChunksRef.current.push(new Float32Array(channelData));
       };
 
-      mediaRecorder.onstop = () => {
-        const audio = new Blob(audioChunksRef.current, { type: mimeType });
-        setAudioBlob(audio);
-        setAudioUrl(URL.createObjectURL(audio));
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      mediaRecorder.start();
+      source.connect(processor);
+      processor.connect(audioContext.destination);
       setIsRecording(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Permiso denegado';
-      setError('No se pudo acceder al micrófono: ' + msg);
+      const message = err instanceof Error ? err.message : 'Permiso denegado';
+      setError('No se pudo acceder al micrófono: ' + message);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
+    if (!isRecording) return;
+
+    const processor = audioProcessorRef.current;
+    const source = audioSourceRef.current;
+    const audioContext = audioContextRef.current;
+    const stream = mediaStreamRef.current;
+
+    processor?.disconnect();
+    source?.disconnect();
+    stream?.getTracks().forEach((track) => track.stop());
+    void audioContext?.close();
+
+    const merged = mergeAudioChunks(audioChunksRef.current);
+    const downsampled = downsampleBuffer(
+      merged,
+      audioSampleRateRef.current,
+      TARGET_SAMPLE_RATE
+    );
+    const audio = encodeWav(downsampled, TARGET_SAMPLE_RATE);
+
+    setAudioBlob(audio);
+    setAudioUrl(URL.createObjectURL(audio));
+    setIsRecording(false);
+    audioProcessorRef.current = null;
+    audioSourceRef.current = null;
+    audioContextRef.current = null;
+    mediaStreamRef.current = null;
   };
 
-  const handleProcessImage = async () => {
+  const handleAnalyzeImage = async () => {
     if (!selectedFile) return;
 
     setIsProcessing(true);
     setError(null);
+    setSuccessInfo(null);
+    setPhotoConfidence(null);
+    setPhotoAnalysis(null);
     setProcessStep('1/3 Ejecutando OCR local (OCR_LATIN)...');
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('fuente', 'foto');
+      formData.append('action', 'analyze');
 
       setTimeout(() => {
-        setProcessStep('2/3 Categorizando con Llama 3.2 1B...');
+        setProcessStep('2/3 Detectando monto del ticket...');
       }, 1500);
 
       setTimeout(() => {
-        setProcessStep('3/3 Verificando anomalías...');
+        setProcessStep('3/3 Calculando confianza...');
       }, 3000);
 
       const res = await fetch('/api/gastos', {
@@ -117,7 +255,65 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
         throw new Error(json.error || 'Error al procesar la imagen');
       }
 
+      const detectedAmount = Number(json.data?.monto ?? 0);
+      const detectedCategory = json.data?.categoria || 'Alimentación';
+      setPhotoAnalysis({
+        monto: detectedAmount,
+        categoria: detectedCategory,
+        fecha: json.data?.fecha || new Date().toISOString().split('T')[0],
+        descripcion: json.data?.descripcion,
+        rawText: json.meta?.rawTextExtracted || ''
+      });
+      setPhotoAmount(detectedAmount > 0 ? String(detectedAmount) : '');
+      setPhotoCategory(detectedCategory);
+      setPhotoConfidence(json.meta?.photoConfidence ?? null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Error durante la inferencia local';
+      setError(message);
+    } finally {
+      setIsProcessing(false);
+      setProcessStep('');
+    }
+  };
+
+  const handleConfirmPhotoExpense = async () => {
+    if (!photoAnalysis) return;
+    if (!photoTitle.trim()) {
+      setError('Poné un título para este ticket antes de guardarlo');
+      return;
+    }
+
+    const confirmedAmount = Number(photoAmount);
+    if (!Number.isFinite(confirmedAmount) || confirmedAmount <= 0) {
+      setError('Confirmá un monto mayor a cero');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+    setProcessStep('Guardando gasto confirmado...');
+
+    try {
+      const res = await fetch('/api/gastos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fuente: 'foto',
+          text: photoAnalysis.rawText,
+          monto: confirmedAmount,
+          categoria: photoCategory,
+          fecha: photoAnalysis.fecha,
+          descripcion: photoTitle.trim()
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Error al guardar el ticket');
+      }
+
       onExpenseAdded(json.data);
+      setPhotoConfidence(json.meta?.photoConfidence ?? photoConfidence);
       setSuccessInfo(
         `Gasto registrado: $${json.data.monto} en ${json.data.categoria}${
           json.data.flag_anomalia ? ' ⚠️ (Anomalía detectada)' : ''
@@ -125,9 +321,12 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       );
       setSelectedFile(null);
       setImagePreview(null);
+      setPhotoTitle('');
+      setPhotoAmount('');
+      setPhotoAnalysis(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error durante la inferencia local';
-      setError(msg);
+      const message = err instanceof Error ? err.message : 'Error guardando ticket';
+      setError(message);
     } finally {
       setIsProcessing(false);
       setProcessStep('');
@@ -139,6 +338,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
 
     setIsProcessing(true);
     setError(null);
+    setPhotoConfidence(null);
     setProcessStep('1/3 Transcribiendo con Whisper local...');
 
     try {
@@ -182,8 +382,8 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       setAudioBlob(null);
       setAudioUrl(null);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error durante la transcripción local';
-      setError(msg);
+      const message = err instanceof Error ? err.message : 'Error durante la transcripción local';
+      setError(message);
     } finally {
       setIsProcessing(false);
       setProcessStep('');
@@ -219,8 +419,8 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
       setManualMonto('');
       setManualDesc('');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error guardando gasto';
-      setError(msg);
+      const message = err instanceof Error ? err.message : 'Error guardando gasto';
+      setError(message);
     } finally {
       setIsProcessing(false);
     }
@@ -258,6 +458,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
             onClick={() => {
               setTab('voz');
               setError(null);
+              setPhotoConfidence(null);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               tab === 'voz'
@@ -272,6 +473,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
             onClick={() => {
               setTab('manual');
               setError(null);
+              setPhotoConfidence(null);
             }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               tab === 'manual'
@@ -303,6 +505,28 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
           >
             Cerrar
           </button>
+        </div>
+      )}
+
+      {photoConfidence && (
+        <div
+          className={`mb-4 p-3.5 rounded-xl text-xs flex items-start gap-2 border ${
+            photoConfidence.level === 'alta'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+              : photoConfidence.level === 'media'
+                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+                : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'
+          }`}
+        >
+          {photoConfidence.level === 'alta' ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          )}
+          <div>
+            <p className="font-semibold">Monto del ticket: {photoConfidence.label}</p>
+            <p className="mt-0.5 opacity-90">{photoConfidence.reasons.join('. ')}</p>
+          </div>
         </div>
       )}
 
@@ -344,6 +568,10 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                 onClick={() => {
                   setImagePreview(null);
                   setSelectedFile(null);
+                  setPhotoTitle('');
+                  setPhotoAmount('');
+                  setPhotoAnalysis(null);
+                  setPhotoConfidence(null);
                 }}
                 className="absolute top-2 right-2 bg-black/70 hover:bg-black text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-md"
               >
@@ -353,23 +581,89 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
           )}
 
           {selectedFile && (
-            <button
-              onClick={handleProcessImage}
-              disabled={isProcessing}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>{processStep || 'Procesando ticket...'}</span>
-                </>
+            <div className="space-y-3">
+              {!photoAnalysis ? (
+                <button
+                  onClick={handleAnalyzeImage}
+                  disabled={isProcessing}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>{processStep || 'Analizando ticket...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Analizar Ticket con QVAC</span>
+                    </>
+                  )}
+                </button>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
-                  <span>Procesar Ticket con QVAC</span>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Monto detectado
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={photoAmount}
+                      onChange={(e) => setPhotoAmount(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Título
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Supermercado, farmacia, cena..."
+                      value={photoTitle}
+                      onChange={(e) => setPhotoTitle(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Tipo de gasto
+                    </label>
+                    <select
+                      value={photoCategory}
+                      onChange={(e) => setPhotoCategory(e.target.value)}
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {EXPENSE_CATEGORIES.map((category) => (
+                        <option key={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleConfirmPhotoExpense}
+                    disabled={isProcessing}
+                    className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{processStep || 'Guardando gasto...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Confirmar y Guardar</span>
+                      </>
+                    )}
+                  </button>
                 </>
               )}
-            </button>
+            </div>
           )}
         </div>
       )}
@@ -462,15 +756,9 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
               onChange={(e) => setManualCat(e.target.value)}
               className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option>Alimentación</option>
-              <option>Transporte</option>
-              <option>Servicios</option>
-              <option>Salud</option>
-              <option>Entretenimiento</option>
-              <option>Indumentaria</option>
-              <option>Tecnología</option>
-              <option>Hogar</option>
-              <option>Otros</option>
+              {EXPENSE_CATEGORIES.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
             </select>
           </div>
 

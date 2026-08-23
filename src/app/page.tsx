@@ -24,6 +24,10 @@ import {
   Trash2
 } from 'lucide-react';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -36,12 +40,14 @@ export default function Home() {
 
   // Check Auth Session
   useEffect(() => {
-    const session = getSessionUser();
-    if (!session) {
-      router.push('/login');
-    } else {
+    void Promise.resolve().then(() => {
+      const session = getSessionUser();
+      if (!session) {
+        router.push('/login');
+        return;
+      }
       setUser(session);
-    }
+    });
   }, [router]);
 
   const loadData = async () => {
@@ -107,6 +113,12 @@ export default function Home() {
     }
   };
 
+  const handleExpenseUpdated = (updatedExpense: Expense) => {
+    setExpenses((prev) =>
+      prev.map((expense) => (expense.id === updatedExpense.id ? updatedExpense : expense))
+    );
+  };
+
   const handleLogout = () => {
     logoutUser();
     router.push('/login');
@@ -123,8 +135,8 @@ export default function Home() {
       } else {
         setWarmupStatus('⚠️ Error en warmup: ' + (json.error || 'revisar logs'));
       }
-    } catch (e: unknown) {
-      setWarmupStatus('⚠️ Error: ' + (e instanceof Error ? e.message : 'Error en warmup'));
+    } catch (error: unknown) {
+      setWarmupStatus('⚠️ Error: ' + getErrorMessage(error, 'no se pudo precargar'));
     } finally {
       setIsWarmingUp(false);
     }
@@ -356,6 +368,7 @@ export default function Home() {
             <ExpenseList
               expenses={expenses}
               onExpenseDeleted={handleExpenseDeleted}
+              onExpenseUpdated={handleExpenseUpdated}
             />
           </div>
 

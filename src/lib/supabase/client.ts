@@ -81,9 +81,44 @@ class LocalExpenseStore {
   }
 
   async deleteExpense(id: string): Promise<boolean> {
-    const prevLen = this.expenses.length;
     this.expenses = this.expenses.filter((e) => e.id !== id);
-    return this.expenses.length < prevLen;
+    return true;
+  }
+
+  async updateExpense(id: string, updates: Partial<Expense>): Promise<Expense | null> {
+    const index = this.expenses.findIndex((e) => e.id === id);
+    if (index === -1) {
+      if (
+        typeof updates.monto !== 'number' ||
+        !updates.categoria ||
+        !updates.fecha ||
+        !updates.fuente
+      ) {
+        return null;
+      }
+
+      const insertedExpense: Expense = {
+        id,
+        monto: updates.monto,
+        categoria: updates.categoria,
+        fecha: updates.fecha,
+        fuente: updates.fuente,
+        flag_anomalia: updates.flag_anomalia ?? false,
+        descripcion: updates.descripcion,
+        raw_text: updates.raw_text,
+        created_at: updates.created_at
+      };
+      this.expenses.unshift(insertedExpense);
+      return insertedExpense;
+    }
+
+    const updatedExpense = {
+      ...this.expenses[index],
+      ...updates,
+      id
+    };
+    this.expenses[index] = updatedExpense;
+    return updatedExpense;
   }
 
   async getIngresos(): Promise<Ingreso[]> {
@@ -177,3 +212,33 @@ export async function removeIngreso(id: string): Promise<boolean> {
   return localStore.deleteIngreso(id);
 }
 
+export async function updateExpense(
+  id: string,
+  updates: Partial<Expense>
+): Promise<Expense | null> {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('gastos')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (!error && data) return data as Expense;
+
+    if (updates.reviewed !== undefined) {
+      const { reviewed, ...updatesWithoutReviewed } = updates;
+      const retry = await supabase
+        .from('gastos')
+        .update(updatesWithoutReviewed)
+        .eq('id', id)
+        .select()
+        .single();
+      if (!retry.error && retry.data) {
+        return { ...(retry.data as Expense), reviewed };
+      }
+    }
+
+    return null;
+  }
+  return localStore.updateExpense(id, updates);
+}

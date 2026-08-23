@@ -10,6 +10,7 @@ export interface Expense {
   raw_text?: string;
   descripcion?: string;
   created_at?: string;
+  reviewed?: boolean;
 }
 
 export interface ParsedExpense {
