@@ -1,35 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── Pockit Warm Merchant Design System ── */
+
+  /* Surface & Background */
+  --color-background: #FFF8F4;
+  --color-surface: #FFFFFF;
+  --color-surface-dim: #E4D8CD;
+  --color-surface-container-low: #FEF1E6;
+  --color-surface-container: #F8ECE0;
+  --color-surface-container-high: #F3E6DB;
+  --color-surface-variant: #EDE0D5;
+
+  /* Primary — Ochre / Deep Gold */
+  --color-primary: #845400;
+  --color-primary-container: #C98A2C;
+  --color-on-primary: #FFFFFF;
+  --color-on-primary-container: #442900;
+  --color-primary-fixed: #FFDDB6;
+  --color-inverse-primary: #FFB958;
+
+  /* Secondary — Sage Green */
+  --color-secondary: #44664B;
+  --color-secondary-container: #6B8F71;
+  --color-on-secondary: #FFFFFF;
+  --color-on-secondary-container: #4A6C50;
+  --color-secondary-fixed: #C5ECC9;
+
+  /* Tertiary — Blue */
+  --color-tertiary: #006491;
+  --color-tertiary-container: #4A9ED3;
+  --color-on-tertiary: #FFFFFF;
+
+  /* Neutral */
+  --color-neutral: #7F756C;
+  --color-on-surface: #201B14;
+  --color-on-surface-variant: #514536;
+  --color-outline: #837564;
+  --color-outline-variant: #D6C4B1;
+
+  /* Error */
+  --color-error: #BA1A1A;
+  --color-error-container: #FFDAD6;
+  --color-on-error: #FFFFFF;
+
+  /* Inverse */
+  --color-inverse-surface: #362F28;
+  --color-inverse-on-surface: #FBEFE3;
+
+  /* Shadows */
+  --shadow-card: 0px 4px 20px rgba(27, 27, 31, 0.06);
+  --shadow-elevated: 0px 8px 32px rgba(27, 27, 31, 0.10);
+
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-on-surface);
+  --font-sans: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  line-height: 1.5;
 }
 
-/* Hide scrollbar but keep scroll functionality */
+/* ── Utility: Hide scrollbar but keep scroll functionality ── */
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .no-scrollbar::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari, Opera */
+  display: none;
+}
+
+/* ── Smooth scrollbar for the app ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface-container-low);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline);
 }

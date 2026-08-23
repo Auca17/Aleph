@@ -66,29 +66,57 @@ export function IncomeCapture({ onIncomeAdded }: IncomeCaptureProps) {
     }
   };
 
+  const inputStyle = {
+    background: 'var(--color-surface-container-low)',
+    border: '1px solid var(--color-outline-variant)',
+    color: 'var(--color-on-surface)',
+  };
+
+  const focusStyle = (el: HTMLInputElement | HTMLSelectElement) => {
+    el.style.borderColor = 'var(--color-secondary-container)';
+    el.style.boxShadow = '0 0 0 2px rgba(107,143,113,0.2)';
+  };
+  const blurStyle = (el: HTMLInputElement | HTMLSelectElement) => {
+    el.style.borderColor = 'var(--color-outline-variant)';
+    el.style.boxShadow = 'none';
+  };
+
   return (
-    <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-emerald-500/20 dark:border-emerald-950 rounded-3xl p-6 shadow-xl shadow-zinc-200/50 dark:shadow-black/50">
-      <div className="flex items-center gap-2.5 mb-5 pb-3 border-b border-zinc-200 dark:border-zinc-800">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+    <div
+      className="rounded-3xl p-5"
+      style={{
+        background: 'var(--color-surface)',
+        boxShadow: 'var(--shadow-card)',
+        border: '1px solid var(--color-outline-variant)',
+      }}
+    >
+      {/* HEADER */}
+      <div className="flex items-center gap-2.5 mb-5 pb-4" style={{ borderBottom: '1px solid var(--color-outline-variant)' }}>
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+          style={{ background: 'var(--color-secondary)', color: 'var(--color-on-secondary)' }}
+        >
           <TrendingUp className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+          <h3 className="text-sm font-bold" style={{ color: 'var(--color-on-surface)' }}>
             Registrar Nuevo Ingreso
           </h3>
-          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+          <p className="text-[11px]" style={{ color: 'var(--color-neutral)' }}>
             Carga de cobranzas, facturación y entradas de dinero
           </p>
         </div>
       </div>
 
+      {/* STATUS MESSAGE */}
       {statusMsg && (
         <div
-          className={`mb-4 p-2.5 rounded-xl text-xs font-medium ${
+          className="mb-4 p-2.5 rounded-xl text-xs font-medium"
+          style={
             statusMsg.startsWith('✓')
-              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-              : 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-          }`}
+              ? { background: 'var(--color-secondary-fixed)', color: 'var(--color-secondary)', border: '1px solid var(--color-secondary-container)' }
+              : { background: 'var(--color-error-container)', color: 'var(--color-error)', border: '1px solid rgba(186,26,26,0.3)' }
+          }
         >
           {statusMsg}
         </div>
@@ -98,11 +126,11 @@ export function IncomeCapture({ onIncomeAdded }: IncomeCaptureProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* MONTO */}
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--color-on-surface-variant)' }}>
               Monto ($ ARS)
             </label>
             <div className="relative flex items-center">
-              <DollarSign className="absolute left-3 w-4 h-4 text-emerald-500" />
+              <DollarSign className="absolute left-3 w-4 h-4" style={{ color: 'var(--color-secondary)' }} />
               <input
                 type="number"
                 step="0.01"
@@ -111,23 +139,29 @@ export function IncomeCapture({ onIncomeAdded }: IncomeCaptureProps) {
                 value={monto}
                 onChange={(e) => setMonto(e.target.value)}
                 disabled={isLoading}
-                className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
+                className="w-full pl-9 pr-3 py-2 rounded-xl text-xs font-medium outline-none transition-all disabled:opacity-50"
+                style={inputStyle}
+                onFocus={(e) => focusStyle(e.currentTarget)}
+                onBlur={(e) => blurStyle(e.currentTarget)}
               />
             </div>
           </div>
 
           {/* CATEGORIA */}
           <div>
-            <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+            <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--color-on-surface-variant)' }}>
               Categoría
             </label>
             <div className="relative flex items-center">
-              <Tag className="absolute left-3 w-4 h-4 text-emerald-500" />
+              <Tag className="absolute left-3 w-4 h-4" style={{ color: 'var(--color-secondary)' }} />
               <select
                 value={categoria}
                 onChange={(e) => setCategoria(e.target.value)}
                 disabled={isLoading}
-                className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all disabled:opacity-50 appearance-none"
+                className="w-full pl-9 pr-3 py-2 rounded-xl text-xs font-medium outline-none transition-all disabled:opacity-50 appearance-none cursor-pointer"
+                style={inputStyle}
+                onFocus={(e) => focusStyle(e.currentTarget)}
+                onBlur={(e) => blurStyle(e.currentTarget)}
               >
                 {categories.map((cat) => (
                   <option key={cat} value={cat}>
@@ -141,26 +175,33 @@ export function IncomeCapture({ onIncomeAdded }: IncomeCaptureProps) {
 
         {/* DESCRIPCION */}
         <div>
-          <label className="block text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
+          <label className="block text-[11px] font-semibold mb-1" style={{ color: 'var(--color-on-surface-variant)' }}>
             Descripción / Cliente
           </label>
           <div className="relative flex items-center">
-            <FileText className="absolute left-3 w-4 h-4 text-zinc-400" />
+            <FileText className="absolute left-3 w-4 h-4" style={{ color: 'var(--color-neutral)' }} />
             <input
               type="text"
               placeholder="Ej. Factura A Cliente X o Cobro proyecto"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               disabled={isLoading}
-              className="w-full pl-9 pr-3 py-2 bg-zinc-50 dark:bg-zinc-800/90 border border-zinc-200 dark:border-zinc-700 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all disabled:opacity-50"
+              className="w-full pl-9 pr-3 py-2 rounded-xl text-xs outline-none transition-all disabled:opacity-50"
+              style={inputStyle}
+              onFocus={(e) => focusStyle(e.currentTarget)}
+              onBlur={(e) => blurStyle(e.currentTarget)}
             />
           </div>
         </div>
 
+        {/* SUBMIT */}
         <button
           type="submit"
           disabled={isLoading || !monto}
-          className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+          className="w-full py-2.5 px-4 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50 cursor-pointer"
+          style={{ background: 'var(--color-secondary)', color: 'var(--color-on-secondary)' }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = '0.9')}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.opacity = '1')}
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />

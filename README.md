@@ -1,9 +1,9 @@
-# Aleph — Local Operations Agent for Personal Finances (QVAC Hackathon 2026)
+# Pockit — Local Operations Agent for Personal Finances (QVAC Hackathon 2026)
 
 > **Track 1: Local agents for operations work — QVAC (Tether)**  
 > 100% On-Device AI Inference with `@qvac/sdk`. Zero cloud AI calls.
 
-Aleph is an intelligent personal expense manager built for freelancers and autonomous workers who lack formal accounting. The user captures expenses through **voice notes** or **receipt photos**; Aleph transcribes, performs OCR, categorizes expenses, detects financial outliers/anomalies deterministically in code, and provides conversational financial consultation via local streaming LLM inference.
+Pockit is an intelligent personal expense manager built for freelancers and autonomous workers who lack formal accounting. The user captures expenses through **voice notes** or **receipt photos**; Pockit transcribes, performs OCR, categorizes expenses, detects financial outliers/anomalies deterministically in code, and provides conversational financial consultation via local streaming LLM inference.
 
 ---
 
