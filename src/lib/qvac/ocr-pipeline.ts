@@ -20,10 +20,10 @@ export async function getOcrModel(): Promise<string> {
         modelSrc: OCR_LATIN,
         modelConfig: {
           langList: ['es', 'en'],
-          magRatio: 1.5,
+          magRatio: 2,
           defaultRotationAngles: [90, 180, 270],
           contrastRetry: true,
-          lowConfidenceThreshold: 0.4,
+          lowConfidenceThreshold: 0.35,
           recognizerBatchSize: 1
         }
       });

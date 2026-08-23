@@ -11,15 +11,65 @@ import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function getPhotoAmountConfidence(rawText: string, monto: number) {
+  const reasons: string[] = [];
+  const hasTotalLabel =
+    /\b(total|tot|importe|monto|suma\s+de\s+sus\s+pagos|total\s+a\s+pagar)\b|t[o0]ta[il1]/i.test(
+      rawText
+    );
+  const hasPaymentLabel =
+    /\b(pagado|pago|abonado|efectivo|tarjeta|visa|master|debito|débito|credito|crédito)\b/i.test(
+      rawText
+    );
+  const numericMatches = rawText.match(/\d+(?:[.,]\d+)*/g) || [];
+  const isShortOcr = rawText.trim().length < 25;
+
+  if (monto <= 0) {
+    return {
+      level: 'baja',
+      label: 'Baja confianza',
+      reasons: ['No se detectó un monto confiable en el ticket']
+    };
+  }
+
+  if (hasTotalLabel) {
+    return {
+      level: 'alta',
+      label: 'Alta confianza',
+      reasons: ['El OCR encontró una línea de total o importe']
+    };
+  }
+
+  if (hasPaymentLabel) {
+    return {
+      level: 'media',
+      label: 'Confianza media',
+      reasons: ['El monto salió de una línea de pago, no de un total explícito']
+    };
+  }
+
+  if (isShortOcr) reasons.push('El OCR extrajo poco texto');
+  if (numericMatches.length > 8) reasons.push('El ticket tiene muchos números mezclados');
+
+  return {
+    level: reasons.length > 0 ? 'baja' : 'media',
+    label: reasons.length > 0 ? 'Baja confianza' : 'Confianza media',
+    reasons: reasons.length > 0 ? reasons : ['El monto salió de importes sueltos del OCR']
+  };
+}
+
 export async function GET() {
   try {
     const expenses = await fetchExpenses();
     return NextResponse.json({ success: true, data: expenses });
   } catch (error: unknown) {
     console.error('Error fetching expenses:', error);
-    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: getErrorMessage(error, 'Internal server error') },
       { status: 500 }
     );
   }
@@ -36,11 +86,25 @@ export async function POST(req: NextRequest) {
     let customCategoria: string | null = null;
     let customFecha: string | null = null;
     let customDescripcion: string | null = null;
+    let requestAction: string | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       const file = formData.get('file') as File | null;
       fuente = (formData.get('fuente') as ExpenseSource) || 'foto';
+      const action = formData.get('action');
+      requestAction = typeof action === 'string' ? action : null;
+      const formMonto = formData.get('monto');
+      const formCategoria = formData.get('categoria');
+      const formFecha = formData.get('fecha');
+      const formDescripcion = formData.get('descripcion');
+
+      if (formMonto !== null) customMonto = Number(formMonto);
+      if (typeof formCategoria === 'string' && formCategoria) customCategoria = formCategoria;
+      if (typeof formFecha === 'string' && formFecha) customFecha = formFecha;
+      if (typeof formDescripcion === 'string' && formDescripcion) {
+        customDescripcion = formDescripcion;
+      }
 
       if (file) {
         const bytes = await file.arrayBuffer();
@@ -84,13 +148,24 @@ export async function POST(req: NextRequest) {
     };
 
     if (rawText && (customMonto === null || !customCategoria)) {
-      const llmParsed = await parseAndCategorizeExpense(rawText);
+      const llmParsed = await parseAndCategorizeExpense(rawText, fuente);
       parsed = {
         monto: customMonto ?? llmParsed.monto,
         categoria: customCategoria ?? llmParsed.categoria,
         fecha: customFecha ?? llmParsed.fecha ?? new Date().toISOString().split('T')[0],
         descripcion: customDescripcion ?? llmParsed.descripcion ?? rawText.slice(0, 50)
       };
+    }
+
+    if (requestAction === 'analyze' && fuente === 'foto') {
+      return NextResponse.json({
+        success: true,
+        data: parsed,
+        meta: {
+          rawTextExtracted: rawText,
+          photoConfidence: getPhotoAmountConfidence(rawText, parsed.monto)
+        }
+      });
     }
 
     // Calculate Anomaly in deterministic code
@@ -113,14 +188,15 @@ export async function POST(req: NextRequest) {
       data: savedExpense,
       meta: {
         anomalyDetails: anomalyResult,
-        rawTextExtracted: rawText
+        rawTextExtracted: rawText,
+        photoConfidence:
+          fuente === 'foto' ? getPhotoAmountConfidence(rawText, parsed.monto) : null
       }
     });
   } catch (error: unknown) {
     console.error('Error processing expense:', error);
-    const message = error instanceof Error ? error.message : 'Error processing expense';
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: getErrorMessage(error, 'Error processing expense') },
       { status: 500 }
     );
   } finally {
