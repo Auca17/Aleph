@@ -612,7 +612,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                       placeholder="0.00"
                       value={photoAmount}
                       onChange={(e) => setPhotoAmount(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
@@ -625,7 +625,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                       placeholder="Ej: Supermercado, farmacia, cena..."
                       value={photoTitle}
                       onChange={(e) => setPhotoTitle(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
@@ -636,7 +636,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
                     <select
                       value={photoCategory}
                       onChange={(e) => setPhotoCategory(e.target.value)}
-                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                       {EXPENSE_CATEGORIES.map((category) => (
                         <option key={category}>{category}</option>
@@ -743,7 +743,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
               placeholder="0.00"
               value={manualMonto}
               onChange={(e) => setManualMonto(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -754,7 +754,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
             <select
               value={manualCat}
               onChange={(e) => setManualCat(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {EXPENSE_CATEGORIES.map((category) => (
                 <option key={category}>{category}</option>
@@ -771,7 +771,7 @@ export function ExpenseCapture({ onExpenseAdded }: ExpenseCaptureProps) {
               placeholder="Ej: Café con medialunas"
               value={manualDesc}
               onChange={(e) => setManualDesc(e.target.value)}
-              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 

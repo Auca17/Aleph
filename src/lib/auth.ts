@@ -5,11 +5,11 @@ export interface UserProfile {
   rol: string;
 }
 
-const STORAGE_KEY = 'aleph_session';
+const STORAGE_KEY = 'pockit_session';
 
 export const DEFAULT_USER: UserProfile = {
-  email: 'demo@aleph.ai',
-  nombre: 'Alex Aleph',
+  email: 'demo@pockit.ai',
+  nombre: 'Alex Pockit',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
   rol: 'Autónomo / Freelancer'
 };
