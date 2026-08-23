@@ -463,7 +463,7 @@ export default function Home() {
             <IncomeCapture onIncomeAdded={handleIncomeAdded} userEmail={user.email} />
           )}
 
-          <ChatQuery expenses={expenses} userEmail={user.email} />
+          <ChatQuery expenses={expenses} ingresos={ingresos} userEmail={user.email} />
         </div>
 
         {/* RIGHT COLUMN: EXPENSES & INGRESOS LIST */}

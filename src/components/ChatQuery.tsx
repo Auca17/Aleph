@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Expense } from '@/types/expense';
+import { Ingreso } from '@/types/ingreso';
 
 interface Message {
   id: string;
@@ -13,15 +14,16 @@ interface Message {
 
 interface ChatQueryProps {
   expenses?: Expense[];
+  ingresos?: Ingreso[];
   userEmail?: string;
 }
 
-export function ChatQuery({ expenses = [], userEmail }: ChatQueryProps) {
+export function ChatQuery({ expenses = [], ingresos = [], userEmail }: ChatQueryProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       sender: 'bot',
-      text: '¡Hola! Soy Pockit AI, tu agente financiero local impulsado por QVAC. Podés preguntarme sobre tus gastos, totales por categoría o explicaciones sobre anomalías.'
+      text: '¡Hola! Soy Pockit AI, tu agente financiero local impulsado por QVAC. Podés preguntarme sobre gastos, ingresos, balance, categorías o anomalías.'
     }
   ]);
   const [input, setInput] = useState('');
@@ -63,7 +65,11 @@ export function ChatQuery({ expenses = [], userEmail }: ChatQueryProps) {
           'Content-Type': 'application/json',
           ...(userEmail ? { 'x-pockit-user-email': userEmail } : {})
         },
-        body: JSON.stringify({ pregunta: textToSend, expensesSnapshot: expenses })
+        body: JSON.stringify({
+          pregunta: textToSend,
+          expensesSnapshot: expenses,
+          incomesSnapshot: ingresos
+        })
       });
 
       if (!res.ok || !res.body) {
@@ -101,8 +107,8 @@ export function ChatQuery({ expenses = [], userEmail }: ChatQueryProps) {
   };
 
   const quickPrompts = [
-    '¿Qué gasté esta semana?',
-    '¿Tengo alguna anomalía?'
+    '¿Cómo está mi balance?',
+    '¿Cuál fue mi mayor gasto?'
   ];
 
   return (
@@ -218,7 +224,7 @@ export function ChatQuery({ expenses = [], userEmail }: ChatQueryProps) {
       >
         <input
           type="text"
-          placeholder="Preguntale a Pockit AI sobre tus gastos..."
+          placeholder="Preguntale a Pockit AI sobre tus gastos, ingresos o balance..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           disabled={isStreaming}

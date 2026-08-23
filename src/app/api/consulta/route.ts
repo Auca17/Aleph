@@ -2,7 +2,8 @@ export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Expense } from '@/types/expense';
-import { fetchExpenses } from '@/lib/supabase/client';
+import { Ingreso } from '@/types/ingreso';
+import { fetchExpenses, fetchIngresos } from '@/lib/supabase/client';
 import { answerExpenseQuery } from '@/lib/qvac/llm-pipeline';
 
 function normalizeExpenseSnapshot(value: unknown): Expense[] {
@@ -26,6 +27,24 @@ function normalizeExpenseSnapshot(value: unknown): Expense[] {
     }));
 }
 
+function normalizeIncomeSnapshot(value: unknown): Ingreso[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter((item): item is Record<string, unknown> => item !== null && typeof item === 'object')
+    .map((item) => ({
+      id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
+      monto: Number(item.monto || 0),
+      categoria: typeof item.categoria === 'string' ? item.categoria : 'Otros',
+      fecha: typeof item.fecha === 'string' ? item.fecha : new Date().toISOString(),
+      fuente: item.fuente === 'manual' || item.fuente === 'factura' || item.fuente === 'voz'
+        ? item.fuente
+        : 'manual',
+      descripcion: typeof item.descripcion === 'string' ? item.descripcion : undefined,
+      created_at: typeof item.created_at === 'string' ? item.created_at : undefined
+    }));
+}
+
 function getRequestUserEmail(req: NextRequest): string | null {
   return req.headers.get('x-pockit-user-email');
 }
@@ -42,9 +61,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const snapshot = normalizeExpenseSnapshot(json.expensesSnapshot);
-    const expenses = snapshot.length > 0 ? snapshot : await fetchExpenses(getRequestUserEmail(req));
-    const tokenGenerator = answerExpenseQuery(pregunta, expenses);
+    const userEmail = getRequestUserEmail(req);
+    const expenseSnapshot = normalizeExpenseSnapshot(json.expensesSnapshot);
+    const incomeSnapshot = normalizeIncomeSnapshot(json.incomesSnapshot);
+    const [expenses, ingresos] = await Promise.all([
+      expenseSnapshot.length > 0 ? Promise.resolve(expenseSnapshot) : fetchExpenses(userEmail),
+      incomeSnapshot.length > 0 ? Promise.resolve(incomeSnapshot) : fetchIngresos(userEmail)
+    ]);
+    const tokenGenerator = answerExpenseQuery(pregunta, expenses, ingresos);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
